@@ -95,10 +95,7 @@ Arguments:
 Evaluate generated traces against real traces:
 
 ```bash
-python evaluate.py \
-    --generated generated_traces/compress-gzip/generated_traces.txt \
-    --real Datasets/compress-gzip/sequence_length_200/testing \
-    --output evaluation_results.json
+python evaluate.py --generated generated_traces/compress-gzip/generated_traces.txt --real Datasets/compress-gzip/sequence_length_200/testing --output evaluation_results.json
 ```
 
 This will compute:

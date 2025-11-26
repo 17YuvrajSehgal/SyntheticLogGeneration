@@ -135,8 +135,42 @@ def main():
     generated_sequences = denormalize(generated_sequences, min_val, max_val)
     generated_sequences = quantize_to_integers(generated_sequences)
     
-    # Clip to valid range (assuming system call IDs are positive)
-    generated_sequences = np.clip(generated_sequences, 0, None)
+    # Get actual valid event ID range from real data
+    try:
+        from data_loader import TraceDataset
+        dataset_name = model_args.get('dataset', 'compress-gzip')
+        real_dataset = TraceDataset(
+            f"Datasets/{dataset_name}/sequence_length_{args.seq_len}/testing",
+            args.seq_len,
+            normalize=False
+        )
+        valid_min = int(real_dataset.min_val)
+        valid_max = int(real_dataset.max_val)
+        real_unique = np.unique(real_dataset.data.flatten())
+        
+        print(f"Valid event ID range: {valid_min} to {valid_max}")
+        print(f"Number of valid event IDs: {len(real_unique)}")
+        print(f"Valid event IDs: {sorted(real_unique)}")
+        
+        # Clip to valid range first
+        generated_sequences = np.clip(generated_sequences, valid_min, valid_max)
+        
+        # Map to nearest valid event ID (ensures we only generate IDs that exist in real data)
+        # This is important for discrete event sequences
+        print("Mapping generated values to nearest valid event IDs...")
+        for i in range(len(generated_sequences)):
+            for j in range(len(generated_sequences[i])):
+                val = generated_sequences[i, j]
+                # Find nearest valid event ID
+                nearest_idx = np.argmin(np.abs(real_unique - val))
+                generated_sequences[i, j] = int(real_unique[nearest_idx])
+        
+        print(f"After mapping: {len(np.unique(generated_sequences))} unique event IDs in generated data")
+        
+    except Exception as e:
+        print(f"Warning: Could not load real data for validation: {e}")
+        print("Clipping to positive values only...")
+        generated_sequences = np.clip(generated_sequences, 0, None)
     
     # Save generated traces
     if args.output_format in ['text', 'both']:
@@ -165,13 +199,21 @@ def main():
     with open(metadata_file, 'w') as f:
         json.dump(metadata, f, indent=2)
     
-    print(f"Generated {args.num_samples} sequences")
+    print(f"\nGenerated {args.num_samples} sequences")
     print(f"Output saved to {args.output_dir}")
-    print(f"Sequence statistics:")
+    print(f"\nSequence statistics:")
     print(f"  Min value: {generated_sequences.min()}")
     print(f"  Max value: {generated_sequences.max()}")
     print(f"  Mean value: {generated_sequences.mean():.2f}")
     print(f"  Std value: {generated_sequences.std():.2f}")
+    print(f"  Unique event IDs: {len(np.unique(generated_sequences))}")
+    
+    # Show distribution of generated event IDs
+    from collections import Counter
+    gen_counts = Counter(generated_sequences.flatten())
+    print(f"\nTop 10 most common generated event IDs:")
+    for event, count in gen_counts.most_common(10):
+        print(f"  Event {event}: {count} times ({count/len(generated_sequences.flatten())*100:.2f}%)")
 
 
 if __name__ == "__main__":

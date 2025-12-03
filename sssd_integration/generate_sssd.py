@@ -119,7 +119,39 @@ def generate_unconditional(output_directory,
     print_size(net)
     
     # Load weights
-    net.load_state_dict(checkpoint['model_state_dict'])
+    # Handle shared memory issues with S4 layer parameters
+    # The S4 kernel parameters (B, P, w) have shared memory in the model
+    # We need to load with strict=False and manually set these parameters
+    state_dict = checkpoint['model_state_dict']
+    
+    # First, load all non-problematic parameters
+    try:
+        net.load_state_dict(state_dict, strict=False)
+    except RuntimeError:
+        # If that fails, manually load parameters one by one
+        model_dict = net.state_dict()
+        for key, value in state_dict.items():
+            if key in model_dict:
+                # Get the parameter object from the model
+                param = dict(net.named_parameters())[key] if key in dict(net.named_parameters()) else None
+                if param is not None:
+                    # For shared memory parameters, replace the entire parameter
+                    try:
+                        with torch.no_grad():
+                            param.data = value.clone().detach().to(param.device)
+                    except RuntimeError as e:
+                        if "more than one element" in str(e):
+                            # Create a new parameter without shared memory
+                            new_param = nn.Parameter(value.clone().detach().to(param.device))
+                            # Replace the parameter in the module
+                            parts = key.split('.')
+                            module = net
+                            for part in parts[:-1]:
+                                module = getattr(module, part)
+                            setattr(module, parts[-1], new_param)
+                        else:
+                            raise
+    
     net.eval()
     print('Model loaded successfully')
     

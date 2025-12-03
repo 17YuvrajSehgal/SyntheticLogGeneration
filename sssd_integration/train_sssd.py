@@ -11,18 +11,53 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from SSSD.src.imputers.SSSDS4Imputer import SSSDS4Imputer
-from SSSD.src.utils.util import calc_diffusion_hyperparams, print_size, find_max_epoch, get_mask_rm, get_mask_bm, \
-    get_mask_mnr, training_loss
+# Add project root to path for our modules
+project_root = os.path.join(os.path.dirname(__file__), '..')
+project_root = os.path.abspath(project_root)
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
-# Add SSSD src to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'SSSD', 'src'))
-
-# from utils.util import find_max_epoch, print_size, training_loss, calc_diffusion_hyperparams
-# from utils.util import get_mask_mnr, get_mask_bm, get_mask_rm
-# from imputers.SSSDS4Imputer import SSSDS4Imputer
+# Import our data loader BEFORE changing directories
 from data_loader import TraceDataset
 from torch.utils.data import DataLoader
+
+# Add SSSD src to path BEFORE importing
+sssd_src_path = os.path.join(os.path.dirname(__file__), '..', 'SSSD', 'src')
+sssd_src_path = os.path.abspath(sssd_src_path)
+
+if not os.path.exists(sssd_src_path):
+    raise FileNotFoundError(f"SSSD src directory not found at: {sssd_src_path}\n"
+                          f"Please ensure the SSSD repository is cloned in the SSSD/ directory.")
+
+# Add to sys.path
+if sssd_src_path not in sys.path:
+    sys.path.insert(0, sssd_src_path)
+
+# Import SSSD modules - they use relative imports from src directory
+# We need to temporarily change working directory and ensure path is set
+original_cwd = os.getcwd()
+
+# Ensure sssd_src_path is first in sys.path
+if sssd_src_path in sys.path:
+    sys.path.remove(sssd_src_path)
+sys.path.insert(0, sssd_src_path)
+
+# Change to sssd_src_path for imports (SSSD code expects to be run from src/)
+os.chdir(sssd_src_path)
+
+try:
+    # Clear any cached imports that might interfere
+    modules_to_remove = [k for k in sys.modules.keys() if k.startswith('imputers.') or k.startswith('utils.')]
+    for mod in modules_to_remove:
+        del sys.modules[mod]
+    
+    # Now import - these should work with relative imports
+    from imputers.SSSDS4Imputer import SSSDS4Imputer
+    from utils.util import calc_diffusion_hyperparams, print_size, find_max_epoch, get_mask_rm, get_mask_bm, \
+        get_mask_mnr, training_loss
+finally:
+    # Restore original directory
+    os.chdir(original_cwd)
 
 
 def load_trace_data(data_path, sequence_length=200, normalize=True):
@@ -177,10 +212,13 @@ def train(output_directory,
         batch = train_data[batch_indices]  # (batch_size, 1, seq_len)
         
         # Get mask based on masking strategy
-        # The mask functions work on individual samples, so we need to create masks for each sample
+        # The mask functions expect (seq_len, channels) format
+        # Our batch is (batch_size, channels, seq_len), so we need to transpose
         masks = []
         for i in range(batch_size):
-            sample = batch[i, 0, :].cpu()  # (seq_len,) - single channel
+            # Get sample: (1, seq_len) -> transpose to (seq_len, 1) for mask function
+            sample = batch[i, :, :].cpu().permute(1, 0)  # (seq_len, 1)
+            
             if masking == 'rm':
                 sample_mask = get_mask_rm(sample, missing_k)  # Returns (seq_len, 1)
             elif masking == 'bm':
@@ -189,11 +227,19 @@ def train(output_directory,
                 sample_mask = get_mask_mnr(sample, missing_k)
             else:
                 raise ValueError(f"Unknown masking strategy: {masking}")
+            
+            # Convert to tensor if needed (Bug 1 fix)
+            if isinstance(sample_mask, np.ndarray):
+                sample_mask = torch.from_numpy(sample_mask).float()
+            elif not isinstance(sample_mask, torch.Tensor):
+                sample_mask = torch.tensor(sample_mask, dtype=torch.float32)
+            
+            # Transpose back to (1, seq_len) format
+            sample_mask = sample_mask.permute(1, 0)  # (1, seq_len)
             masks.append(sample_mask)
         
-        # Stack masks: (batch_size, seq_len, 1) -> (batch_size, 1, seq_len)
-        mask = torch.stack(masks, dim=0).to(device)  # (batch_size, seq_len, 1)
-        mask = mask.permute(0, 2, 1)  # (batch_size, 1, seq_len)
+        # Stack masks: (batch_size, 1, seq_len)
+        mask = torch.stack(masks, dim=0).to(device)  # (batch_size, 1, seq_len)
         
         # Training step - prepare data in format expected by training_loss
         loss_mask = ~mask.bool()  # Invert mask for loss calculation
@@ -217,11 +263,20 @@ def train(output_directory,
                 # Create masks for validation batch
                 val_masks = []
                 for i in range(len(val_batch)):
-                    sample = val_batch[i, 0, :].cpu()
-                    val_sample_mask = get_mask_rm(sample, missing_k)
+                    # Get sample: (1, seq_len) -> transpose to (seq_len, 1) for mask function
+                    sample = val_batch[i, :, :].cpu().permute(1, 0)  # (seq_len, 1)
+                    val_sample_mask = get_mask_rm(sample, missing_k)  # Returns (seq_len, 1)
+                    
+                    # Convert to tensor if needed (Bug 1 fix)
+                    if isinstance(val_sample_mask, np.ndarray):
+                        val_sample_mask = torch.from_numpy(val_sample_mask).float()
+                    elif not isinstance(val_sample_mask, torch.Tensor):
+                        val_sample_mask = torch.tensor(val_sample_mask, dtype=torch.float32)
+                    
+                    # Transpose back to (1, seq_len) format
+                    val_sample_mask = val_sample_mask.permute(1, 0)  # (1, seq_len)
                     val_masks.append(val_sample_mask)
-                val_mask = torch.stack(val_masks, dim=0).to(device)
-                val_mask = val_mask.permute(0, 2, 1)  # (batch_size, 1, seq_len)
+                val_mask = torch.stack(val_masks, dim=0).to(device)  # (batch_size, 1, seq_len)
                 
                 val_loss_mask = ~val_mask.bool()
                 val_X = (val_batch, val_batch, val_mask, val_loss_mask)

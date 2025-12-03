@@ -10,15 +10,51 @@ import json
 import numpy as np
 import torch
 
-from SSSD.src.imputers.SSSDS4Imputer import SSSDS4Imputer
-from SSSD.src.utils.util import find_max_epoch, calc_diffusion_hyperparams, print_size, sampling
+# Add project root to path for our modules
+project_root = os.path.join(os.path.dirname(__file__), '..')
+project_root = os.path.abspath(project_root)
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
-# Add SSSD src to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'SSSD', 'src'))
-
-# from utils.util import find_max_epoch, print_size, sampling, calc_diffusion_hyperparams
-# from imputers.SSSDS4Imputer import SSSDS4Imputer
+# Import our data loader BEFORE changing directories
 from data_loader import TraceDataset
+
+# Add SSSD src to path BEFORE importing
+sssd_src_path = os.path.join(os.path.dirname(__file__), '..', 'SSSD', 'src')
+sssd_src_path = os.path.abspath(sssd_src_path)
+
+if not os.path.exists(sssd_src_path):
+    raise FileNotFoundError(f"SSSD src directory not found at: {sssd_src_path}\n"
+                          f"Please ensure the SSSD repository is cloned in the SSSD/ directory.")
+
+# Add to sys.path
+if sssd_src_path not in sys.path:
+    sys.path.insert(0, sssd_src_path)
+
+# Import SSSD modules - they use relative imports from src directory
+# We need to temporarily change working directory and ensure path is set
+original_cwd = os.getcwd()
+
+# Ensure sssd_src_path is first in sys.path
+if sssd_src_path in sys.path:
+    sys.path.remove(sssd_src_path)
+sys.path.insert(0, sssd_src_path)
+
+# Change to sssd_src_path for imports (SSSD code expects to be run from src/)
+os.chdir(sssd_src_path)
+
+try:
+    # Clear any cached imports that might interfere
+    modules_to_remove = [k for k in sys.modules.keys() if k.startswith('imputers.') or k.startswith('utils.')]
+    for mod in modules_to_remove:
+        del sys.modules[mod]
+    
+    # Now import - these should work with relative imports
+    from imputers.SSSDS4Imputer import SSSDS4Imputer
+    from utils.util import find_max_epoch, calc_diffusion_hyperparams, print_size, sampling
+finally:
+    # Restore original directory
+    os.chdir(original_cwd)
 
 
 def generate_unconditional(output_directory,
@@ -124,14 +160,20 @@ def generate_unconditional(output_directory,
     # Shape: (num_samples, 1, seq_len) -> (num_samples, seq_len)
     generated_sequences = generated_sequences.squeeze(1)
     
-    # Denormalize
-    train_min = norm_info.get('train_min', 0)
-    train_max = norm_info.get('train_max', 100)
+    # Denormalize (Bug 2 fix: don't use arbitrary defaults)
+    train_min = norm_info.get('train_min')
+    train_max = norm_info.get('train_max')
     
-    if train_max > train_min:
+    if train_min is None or train_max is None:
+        print("ERROR: Normalization information missing from checkpoint!")
+        print("Cannot denormalize generated sequences. Please ensure checkpoint contains normalization info.")
+        print("Skipping denormalization - generated values will be in [0, 1] range.")
+        print("You may need to manually denormalize or retrain with normalization info saved.")
+    elif train_max > train_min:
         generated_sequences = generated_sequences * (train_max - train_min) + train_min
+        print(f"Denormalized using range [{train_min}, {train_max}]")
     else:
-        print("Warning: Invalid normalization range, skipping denormalization")
+        print("Warning: Invalid normalization range (max <= min), skipping denormalization")
     
     # Quantize to integers
     generated_sequences = np.round(generated_sequences).astype(np.int32)

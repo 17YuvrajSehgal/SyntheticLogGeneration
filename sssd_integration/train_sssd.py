@@ -63,20 +63,12 @@ finally:
 def load_trace_data(data_path, sequence_length=200, normalize=True):
     """Load trace data and convert to format expected by SSSD."""
     dataset = TraceDataset(data_path, sequence_length, normalize=normalize)
-    dataloader = DataLoader(dataset, batch_size=1, shuffle=False)
-    
-    # Convert to numpy array: (num_samples, seq_len, channels)
-    # For trace data, we treat each sequence as a single channel
-    sequences = []
-    for batch in dataloader:
-        seq = batch.numpy()  # (1, seq_len)
-        sequences.append(seq[0])  # (seq_len,)
-    
-    # Reshape to (num_samples, channels, seq_len) for SSSD
-    # We treat each sequence as having 1 channel
-    data = np.array(sequences)  # (num_samples, seq_len)
-    data = data[:, np.newaxis, :]  # (num_samples, 1, seq_len)
-    
+
+    # dataset.data should already be a NumPy array of shape (num_samples, seq_len)
+    data = dataset.data  # (N, seq_len)
+    # Add channel dimension: (num_samples, 1, seq_len)
+    data = data[:, np.newaxis, :]
+
     return data, dataset.min_val, dataset.max_val
 
 
@@ -174,9 +166,9 @@ def train(output_directory,
         json.dump(norm_info, f, indent=2)
     
     # Convert to torch tensors
-    train_data = torch.from_numpy(train_data).float().to(device)
-    test_data = torch.from_numpy(test_data).float().to(device)
-    
+    train_data = torch.from_numpy(train_data).float()  # stay on CPU
+    test_data = torch.from_numpy(test_data).float()  # stay on CPU
+
     # Create model
     print("Creating model...")
     net = SSSDS4Imputer(**model_config).to(device)
@@ -213,7 +205,7 @@ def train(output_directory,
     for n in pbar:
         # Sample random batch
         batch_indices = np.random.choice(len(train_data), size=batch_size, replace=False)
-        batch = train_data[batch_indices]  # (batch_size, 1, seq_len)
+        batch = train_data[batch_indices].to(device)  # move only this batch
         
         # Get mask based on masking strategy
         # The mask functions expect (seq_len, channels) format
@@ -265,7 +257,7 @@ def train(output_directory,
             net.eval()
             with torch.no_grad():
                 val_indices = np.random.choice(len(test_data), size=min(batch_size, len(test_data)), replace=False)
-                val_batch = test_data[val_indices]
+                val_batch = test_data[val_indices].to(device)
                 
                 # Create masks for validation batch
                 val_masks = []

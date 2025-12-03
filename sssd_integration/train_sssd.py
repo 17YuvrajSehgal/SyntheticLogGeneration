@@ -204,9 +204,13 @@ def train(output_directory,
     
     # Training loop
     print("Starting training...")
+    print(f"Total iterations: {n_iters}, Starting from: {ckpt_iter + 1}")
     net.train()
     
-    for n in range(ckpt_iter + 1, n_iters):
+    from tqdm import tqdm
+    pbar = tqdm(range(ckpt_iter + 1, n_iters), desc="Training", unit="iter")
+    
+    for n in pbar:
         # Sample random batch
         batch_indices = np.random.choice(len(train_data), size=batch_size, replace=False)
         batch = train_data[batch_indices]  # (batch_size, 1, seq_len)
@@ -250,9 +254,12 @@ def train(output_directory,
         loss.backward()
         optimizer.step()
         
+        # Update progress bar
+        pbar.set_postfix({'loss': f'{loss.item():.4f}'})
+        
         # Logging
         if n % iters_per_logging == 0:
-            print("iteration: {} \tloss: {}".format(n, loss.item()), flush=True)
+            print("\niteration: {} \tloss: {:.6f}".format(n, loss.item()), flush=True)
             
             # Validation
             net.eval()
@@ -281,7 +288,7 @@ def train(output_directory,
                 val_loss_mask = ~val_mask.bool()
                 val_X = (val_batch, val_batch, val_mask, val_loss_mask)
                 val_loss = training_loss(net, nn.MSELoss(), val_X, diffusion_hyperparams, only_generate_missing=1)
-                print("validation loss: {}".format(val_loss.item()), flush=True)
+                print("validation loss: {:.6f}".format(val_loss.item()), flush=True)
             net.train()
         
         # Save checkpoint
@@ -296,9 +303,13 @@ def train(output_directory,
             }
             checkpoint_path = os.path.join(output_directory, '{}.pkl'.format(n))
             torch.save(checkpoint, checkpoint_path)
-            print('model at iteration %s is saved' % n, flush=True)
+            print('\n✓ Checkpoint saved at iteration {}'.format(n), flush=True)
     
+    print("\n" + "="*50)
     print("Training completed!")
+    print(f"Total iterations: {n_iters}")
+    print(f"Final checkpoint saved at: {output_directory}")
+    print("="*50)
 
 
 def main():

@@ -37,8 +37,11 @@ class TraceDataset(Dataset):
                     continue
                 try:
                     seq = [int(x) for x in line.split(',')]
-                    if len(seq) >= sequence_length:
-                        sequences.append(seq[:sequence_length])
+                    if sequence_length is None or len(seq) >= sequence_length:
+                        if sequence_length is not None:
+                            sequences.append(seq[:sequence_length])
+                        else:
+                            sequences.append(seq)
                 except ValueError as e:
                     print(f"Warning: Skipping invalid line: {line[:50]}... Error: {e}")
                     continue

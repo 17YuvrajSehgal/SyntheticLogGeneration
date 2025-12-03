@@ -184,8 +184,10 @@ def generate_unconditional(output_directory,
             
             all_generated.append(generated.cpu().numpy())
             
-            if (i + 1) % 10 == 0:
-                print(f"Generated {min((i + 1) * batch_size, num_samples)} / {num_samples} sequences")
+            # Progress logging
+            generated_so_far = min((i + 1) * batch_size, num_samples)
+            if num_batches > 1:
+                print(f"Progress: {generated_so_far} / {num_samples} sequences generated ({100*generated_so_far/num_samples:.1f}%)", flush=True)
     
     # Concatenate all batches
     generated_sequences = np.concatenate(all_generated, axis=0)[:num_samples]
@@ -214,8 +216,29 @@ def generate_unconditional(output_directory,
     # Load real data to get valid event IDs
     try:
         dataset_name = os.path.basename(os.path.dirname(ckpt_path))
+        # Try to find test data - check if sequence_length matches training
+        # First try the exact sequence length
         test_data_path = f"Datasets/{dataset_name}/sequence_length_{sequence_length}/testing"
-        real_dataset = TraceDataset(test_data_path, sequence_length, normalize=False)
+        if not os.path.exists(test_data_path):
+            # If exact path doesn't exist, try to find any testing directory
+            # This handles cases where we're generating different lengths
+            dataset_base = f"Datasets/{dataset_name}"
+            if os.path.exists(dataset_base):
+                # Find any sequence_length_* directory
+                import glob
+                test_dirs = glob.glob(os.path.join(dataset_base, "sequence_length_*/testing"))
+                if test_dirs:
+                    # Use the first one found (prefer longer sequences)
+                    test_data_path = sorted(test_dirs, key=lambda x: int(x.split('sequence_length_')[1].split('/')[0]), reverse=True)[0]
+                    print(f"Note: Using test data from {test_data_path} (sequence length may differ)")
+                else:
+                    raise FileNotFoundError(f"No test data found in {dataset_base}")
+            else:
+                raise FileNotFoundError(f"Dataset directory not found: {dataset_base}")
+        
+        # Load test data - use a large sequence_length to load all sequences
+        # We only need it for getting valid event IDs, not for matching sequence length
+        real_dataset = TraceDataset(test_data_path, sequence_length=10000, normalize=False)
         real_unique = np.unique(real_dataset.data.flatten())
         valid_min = int(real_dataset.min_val)
         valid_max = int(real_dataset.max_val)
@@ -223,7 +246,7 @@ def generate_unconditional(output_directory,
         print(f"Valid event ID range: {valid_min} to {valid_max}")
         print(f"Number of valid event IDs: {len(real_unique)}")
         
-        # Clip to valid range
+        # Clip to valid range first
         generated_sequences = np.clip(generated_sequences, valid_min, valid_max)
         
         # Map to nearest valid event ID
@@ -238,7 +261,12 @@ def generate_unconditional(output_directory,
         
     except Exception as e:
         print(f"Warning: Could not load real data for validation: {e}")
-        generated_sequences = np.clip(generated_sequences, 0, None)
+        print(f"Using normalization range [{train_min}, {train_max}] to clip values")
+        # Use normalization range as fallback
+        if train_min is not None and train_max is not None:
+            generated_sequences = np.clip(generated_sequences, int(train_min), int(train_max))
+        else:
+            generated_sequences = np.clip(generated_sequences, 0, None)
     
     # Save generated sequences
     output_file = os.path.join(output_directory, 'generated_traces.txt')

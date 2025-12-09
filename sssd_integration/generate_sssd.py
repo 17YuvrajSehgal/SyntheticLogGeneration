@@ -238,7 +238,11 @@ def generate_unconditional(output_directory,
         
         # Load test data - use a large sequence_length to load all sequences
         # We only need it for getting valid event IDs, not for matching sequence length
-        real_dataset = TraceDataset(test_data_path, sequence_length=10000, normalize=False)
+        real_dataset = TraceDataset(
+            test_data_path,
+            sequence_length=sequence_length,  # e.g., 200
+            normalize=False
+        )
         real_unique = np.unique(real_dataset.data.flatten())
         valid_min = int(real_dataset.min_val)
         valid_max = int(real_dataset.max_val)

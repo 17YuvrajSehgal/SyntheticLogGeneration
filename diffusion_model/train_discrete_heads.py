@@ -103,7 +103,7 @@ def main():
             it = iter(train_loader)
             x_ids = next(it)
 
-        x_ids = x_ids.to(device)  # [B, L, 3]
+        x_ids = x_ids.to(device, non_blocking=True)  # [B, L, 3]
         # targets
         y_event = x_ids[..., 0]
         y_dt    = x_ids[..., 1]

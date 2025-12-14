@@ -1,5 +1,5 @@
 import torch
-import torch.nn as nn
+import torch.nn.functional as F
 
 class DDPM:
     def __init__(self, T=1000, beta_start=1e-4, beta_end=2e-2, device="cpu"):
@@ -17,29 +17,55 @@ class DDPM:
         self.sqrt_alpha_bars = torch.sqrt(alpha_bars)
         self.sqrt_one_minus_alpha_bars = torch.sqrt(1.0 - alpha_bars)
 
+        self.sqrt_recip_alphas = torch.sqrt(1.0 / alphas)
+
+        # posterior variance for sampling
+        alpha_bars_prev = torch.cat([torch.tensor([1.0], device=device), alpha_bars[:-1]], dim=0)
+        self.posterior_var = betas * (1.0 - alpha_bars_prev) / (1.0 - alpha_bars)
+
     def q_sample(self, x0, t, noise=None):
-        """
-        x0: [B, L, D]
-        t:  [B] in [0, T-1]
-        """
         if noise is None:
             noise = torch.randn_like(x0)
         a = self.sqrt_alpha_bars[t].view(-1, 1, 1)
         b = self.sqrt_one_minus_alpha_bars[t].view(-1, 1, 1)
         return a * x0 + b * noise, noise
 
-def train_one_step(model, diffusion, x0, optimizer):
-    """
-    Predict noise epsilon at random t and compute MSE.
-    """
-    model.train()
-    B = x0.shape[0]
-    t = torch.randint(0, diffusion.T, (B,), device=x0.device, dtype=torch.long)
-    x_t, noise = diffusion.q_sample(x0, t)
-    pred = model(x_t, t)
-    loss = nn.functional.mse_loss(pred, noise)
+    def predict_x0_from_eps(self, x_t, t, eps):
+        a = self.sqrt_alpha_bars[t].view(-1, 1, 1)
+        b = self.sqrt_one_minus_alpha_bars[t].view(-1, 1, 1)
+        x0_hat = (x_t - b * eps) / (a + 1e-8)
+        return x0_hat
 
-    optimizer.zero_grad(set_to_none=True)
-    loss.backward()
-    optimizer.step()
-    return loss.item()
+    @torch.no_grad()
+    def p_sample(self, model, x_t, t):
+        """
+        One reverse step: x_t -> x_{t-1}
+        model(x_t, t) returns eps prediction
+        """
+        B = x_t.shape[0]
+        eps = model(x_t, t)
+
+        beta_t = self.betas[t].view(-1, 1, 1)
+        alpha_t = self.alphas[t].view(-1, 1, 1)
+        abar_t = self.alpha_bars[t].view(-1, 1, 1)
+
+        # DDPM mean
+        mean = (1.0 / torch.sqrt(alpha_t)) * (x_t - (beta_t / torch.sqrt(1.0 - abar_t)) * eps)
+
+        # noise (except at t=0)
+        var = self.posterior_var[t].view(-1, 1, 1)
+        noise = torch.randn_like(x_t)
+        mask = (t != 0).float().view(-1, 1, 1)
+        return mean + mask * torch.sqrt(var + 1e-8) * noise
+
+
+def diffusion_step_losses(denoiser, diffusion, x0, t):
+    """
+    Returns:
+      mse_loss, x0_hat, x_t
+    """
+    x_t, noise = diffusion.q_sample(x0, t)
+    pred_noise = denoiser(x_t, t)
+    mse = F.mse_loss(pred_noise, noise)
+    x0_hat = diffusion.predict_x0_from_eps(x_t, t, pred_noise)
+    return mse, x0_hat, x_t

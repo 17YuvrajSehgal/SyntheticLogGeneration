@@ -53,8 +53,6 @@ def main():
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print("Device:", device)
-    print("Train shards:", len(train_loader.dataset.shard_paths))
-    print("Total windows:", len(train_loader.dataset))
 
     # Resolve paths from project root (works when running with -m)
     ROOT = os.getcwd()
@@ -69,6 +67,9 @@ def main():
         seq_len=args.seq_len,
         cache_shards=1,
     )
+
+    print("Train shards:", len(train_loader.dataset.shard_paths))
+    print("Total windows:", len(train_loader.dataset))
 
     embed = TraceEmbedding(
         num_events=args.num_events,

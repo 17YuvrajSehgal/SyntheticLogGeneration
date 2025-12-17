@@ -111,11 +111,12 @@ Median KL(dt|e): 0.5520
   - Typical event is reasonably modeled
 
 ### Worst Events (Examples)
-| Event ID | KL(dt|e) | Real Occ | Synth Occ |
-|--------|----------|----------|-----------|
-| 33 | 1.19 | 2.7M | 94k |
-| 34 | 1.02 | 2.7M | 36k |
-| 22 | 0.99 | 4.8M | 94k |
+
+| Event ID | KL(dt\|e) | Real Occ | Synth Occ |
+|----------|-----------|----------|-----------|
+| 33       | 1.19      | 2.7M     | 94k       |
+| 34       | 1.02      | 2.7M     | 36k       |
+| 22       | 0.99      | 4.8M     | 94k       |
 
 These are **high-frequency events**, meaning:
 - The model sees them often

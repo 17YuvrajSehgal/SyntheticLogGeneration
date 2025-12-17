@@ -1,5 +1,6 @@
 # sample_autoregressive.py
 import os
+import glob
 import argparse
 import numpy as np
 import torch
@@ -15,19 +16,77 @@ def ensure_dir(path: str):
         os.makedirs(d, exist_ok=True)
 
 
+def _load_first_tokens_npz(npz_path: str):
+    """
+    Returns first tokens [N, 3] from a shard as int64:
+      columns: event, dt, cpu
+    """
+    d = np.load(npz_path)
+    ev0 = d["event"][:, 0].astype(np.int64)
+    dt0 = d["dt"][:, 0].astype(np.int64)
+    cp0 = d["cpu"][:, 0].astype(np.int64)
+    return np.stack([ev0, dt0, cp0], axis=1)
+
+
+def sample_first_tokens_from_real(
+    root_shards: str,
+    benchmark: str,
+    split: str,
+    B: int,
+    max_shards: int = 10,
+    seed: int = 0,
+):
+    """
+    Samples B first-step tokens from real shards (split) to seed x[:,0,:].
+    This avoids artificial BOS=(0,0,0) bias.
+    """
+    rng = np.random.default_rng(seed)
+    pattern = os.path.join(root_shards, benchmark, split, "*.npz")
+    shard_paths = sorted(glob.glob(pattern))
+    if not shard_paths:
+        raise FileNotFoundError(f"No shards found for pattern: {pattern}")
+
+    shard_paths = shard_paths[:max_shards]
+
+    first_tokens = []
+    for p in shard_paths:
+        first_tokens.append(_load_first_tokens_npz(p))
+
+    first_tokens = np.concatenate(first_tokens, axis=0)  # [M, 3]
+    idx = rng.integers(0, first_tokens.shape[0], size=B)
+    return first_tokens[idx]  # [B, 3]
+
+
 @torch.no_grad()
-def sample_ar(ar_model, heads, num_samples, seq_len, device,
-              num_events, num_dt_buckets, num_cpus,
-              temperature=1.0, greedy=True):
+def sample_ar(
+    ar_model,
+    heads,
+    num_samples,
+    seq_len,
+    device,
+    num_events,
+    num_dt_buckets,
+    num_cpus,
+    temperature=1.0,
+    greedy=True,
+    x0: torch.Tensor | None = None,
+):
     """
     Generates [B, L, 3] token ids autoregressively.
-    Uses a simple BOS = (0,0,0) as the first token.
+    If x0 is provided, it seeds x[:,0,:] with real first tokens (recommended).
+    Otherwise defaults to BOS=(0,0,0).
     """
     B = num_samples
     L = seq_len
 
     # output tokens
-    x = torch.zeros((B, L, 3), dtype=torch.long, device=device)  # BOS-filled
+    x = torch.zeros((B, L, 3), dtype=torch.long, device=device)
+
+    # seed first token if provided
+    if x0 is not None:
+        if x0.ndim != 2 or x0.shape[0] != B or x0.shape[1] != 3:
+            raise ValueError(f"x0 must be [B,3], got {tuple(x0.shape)}")
+        x[:, 0, :] = x0.to(device=device, dtype=torch.long)
 
     for t in range(0, L - 1):
         # run model on prefix length t+1
@@ -85,6 +144,19 @@ def main():
     ap.add_argument("--seed", type=int, default=123)
     ap.add_argument("--temperature", type=float, default=1.0)
     ap.add_argument("--greedy", action="store_true")
+
+    # recommended: seed first token from real data to avoid BOS bias
+    ap.add_argument("--seed_from_real", action="store_true",
+                    help="Initialize x[:,0,:] from real first-token distribution instead of (0,0,0).")
+    ap.add_argument("--root_shards", default="window_shards",
+                    help="Root directory containing benchmark/{train,val,test} NPZ shards.")
+    ap.add_argument("--benchmark", default="compress-gzip",
+                    help="Benchmark name under root_shards.")
+    ap.add_argument("--seed_split", default="train", choices=["train", "val", "test"],
+                    help="Which split to sample the first token from.")
+    ap.add_argument("--max_seed_shards", type=int, default=10,
+                    help="How many shards to scan when building the seed distribution.")
+
     args = ap.parse_args()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -124,7 +196,22 @@ def main():
     ar_model.load_state_dict(ckpt["ar_model"])
     heads.load_state_dict(ckpt["heads"])
 
-    embed.eval(); ar_model.eval(); heads.eval()
+    embed.eval()
+    ar_model.eval()
+    heads.eval()
+
+    # build optional x0 seed from real shards
+    x0 = None
+    if args.seed_from_real:
+        x0_np = sample_first_tokens_from_real(
+            root_shards=args.root_shards,
+            benchmark=args.benchmark,
+            split=args.seed_split,
+            B=args.num_samples,
+            max_shards=args.max_seed_shards,
+            seed=args.seed,
+        )
+        x0 = torch.from_numpy(x0_np)
 
     x = sample_ar(
         ar_model, heads,
@@ -136,6 +223,7 @@ def main():
         num_cpus=args.num_cpus,
         temperature=args.temperature,
         greedy=args.greedy,
+        x0=x0,
     )
 
     # write npz like diffusion

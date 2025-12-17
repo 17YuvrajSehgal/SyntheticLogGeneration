@@ -24,7 +24,19 @@ def save_ckpt(path, embed, ar_model, heads, optim, step, args):
 
 
 @torch.no_grad()
-def eval_one_epoch(ar_model, heads, loader, device, num_events, num_dt_buckets, num_cpus, max_batches=50):
+def eval_one_epoch(
+    ar_model,
+    heads,
+    loader,
+    device,
+    num_events,
+    num_dt_buckets,
+    num_cpus,
+    max_batches=50,
+    w_event: float = 1.0,
+    w_dt: float = 1.0,
+    w_cpu: float = 1.0,
+):
     ar_model.eval()
     heads.eval()
 
@@ -48,7 +60,7 @@ def eval_one_epoch(ar_model, heads, loader, device, num_events, num_dt_buckets, 
         ce_dt    = F.cross_entropy(logits["dt"].reshape(-1, num_dt_buckets),     y_dt.reshape(-1))
         ce_cpu   = F.cross_entropy(logits["cpu"].reshape(-1, num_cpus),          y_cpu.reshape(-1))
 
-        loss = ce_event + ce_dt + ce_cpu
+        loss = (w_event * ce_event) + (w_dt * ce_dt) + (w_cpu * ce_cpu)
 
         B, Lm1 = y_event.shape
         total_loss += loss.item() * (B * Lm1)
@@ -83,9 +95,17 @@ def main():
     ap.add_argument("--num_dt_buckets", type=int, default=256)
     ap.add_argument("--num_cpus", type=int, default=4)
 
+    # loss weights (recommended to reduce early CPU collapse)
+    ap.add_argument("--w_event", type=float, default=1.0)
+    ap.add_argument("--w_dt", type=float, default=1.0)
+    ap.add_argument("--w_cpu", type=float, default=2.0)
+
     # misc
     ap.add_argument("--seed", type=int, default=1234)
     ap.add_argument("--clip", type=float, default=1.0)
+
+    # optional: log per-channel accuracies
+    ap.add_argument("--log_acc", action="store_true", help="Print event/dt/cpu accuracies during training prints.")
 
     args = ap.parse_args()
 
@@ -165,7 +185,7 @@ def main():
         ce_dt    = F.cross_entropy(logits["dt"].reshape(-1, args.num_dt_buckets),     y_dt.reshape(-1))
         ce_cpu   = F.cross_entropy(logits["cpu"].reshape(-1, args.num_cpus),          y_cpu.reshape(-1))
 
-        loss = ce_event + ce_dt + ce_cpu
+        loss = (args.w_event * ce_event) + (args.w_dt * ce_dt) + (args.w_cpu * ce_cpu)
 
         optim.zero_grad(set_to_none=True)
         loss.backward()
@@ -176,16 +196,34 @@ def main():
         optim.step()
 
         if step % 50 == 0:
-            print(
-                f"step {step:06d} | loss {loss.item():.4f} | "
-                f"ce_event {ce_event.item():.4f} ce_dt {ce_dt.item():.4f} ce_cpu {ce_cpu.item():.4f}"
-            )
+            if args.log_acc:
+                with torch.no_grad():
+                    pred_ev = torch.argmax(logits["event"], dim=-1)
+                    pred_dt = torch.argmax(logits["dt"], dim=-1)
+                    pred_cp = torch.argmax(logits["cpu"], dim=-1)
+                    acc_ev = (pred_ev == y_event).float().mean().item()
+                    acc_dt = (pred_dt == y_dt).float().mean().item()
+                    acc_cp = (pred_cp == y_cpu).float().mean().item()
+
+                print(
+                    f"step {step:06d} | loss {loss.item():.4f} | "
+                    f"ce_event {ce_event.item():.4f} ce_dt {ce_dt.item():.4f} ce_cpu {ce_cpu.item():.4f} | "
+                    f"acc_event {acc_ev:.3f} acc_dt {acc_dt:.3f} acc_cpu {acc_cp:.3f}"
+                )
+            else:
+                print(
+                    f"step {step:06d} | loss {loss.item():.4f} | "
+                    f"ce_event {ce_event.item():.4f} ce_dt {ce_dt.item():.4f} ce_cpu {ce_cpu.item():.4f}"
+                )
 
         if step % args.eval_every == 0:
             val_nll = eval_one_epoch(
                 ar_model, heads, val_loader, device,
                 args.num_events, args.num_dt_buckets, args.num_cpus,
-                max_batches=50
+                max_batches=50,
+                w_event=args.w_event,
+                w_dt=args.w_dt,
+                w_cpu=args.w_cpu,
             )
             print(f"[VAL] step {step:06d} | avg_nll_per_token {val_nll:.6f}")
 

@@ -41,23 +41,24 @@ def accumulate_from_arrays(event, dt, cpu,
                            out_joint_event_cpu):
     # event, dt, cpu: [B,L]
     # Marginals
-    out_marg_event += np.bincount(event.reshape(-1), minlength=num_events)
-    out_marg_dt    += np.bincount(dt.reshape(-1),    minlength=num_dt)
-    out_marg_cpu   += np.bincount(cpu.reshape(-1),   minlength=num_cpus)
-
+    cpu_flat = cpu.reshape(-1).astype(np.int64)
+    cpu_flat = np.clip(cpu_flat, 0, num_cpus - 1)
+    out_marg_cpu += np.bincount(cpu_flat, minlength=num_cpus)
     # Bigram transitions along time dimension
     e0 = event[:, :-1].reshape(-1)
     e1 = event[:, 1: ].reshape(-1)
     idx = e0 * num_events + e1
     out_bigram_event.reshape(-1)[:] += np.bincount(idx, minlength=num_events * num_events)
 
-    c0 = cpu[:, :-1].reshape(-1)
-    c1 = cpu[:, 1: ].reshape(-1)
+    c0 = np.clip(cpu[:, :-1], 0, num_cpus - 1).reshape(-1).astype(np.int64)
+    c1 = np.clip(cpu[:, 1:], 0, num_cpus - 1).reshape(-1).astype(np.int64)
     idxc = c0 * num_cpus + c1
     out_bigram_cpu.reshape(-1)[:] += np.bincount(idxc, minlength=num_cpus * num_cpus)
 
     # Joint P(event, cpu) at same position
-    ec_idx = event.reshape(-1) * num_cpus + cpu.reshape(-1)
+    cpu_flat = np.clip(cpu.reshape(-1), 0, num_cpus - 1).astype(np.int64)
+    ec_idx = event.reshape(-1).astype(np.int64) * num_cpus + cpu_flat
+
     out_joint_event_cpu.reshape(-1)[:] += np.bincount(ec_idx, minlength=num_events * num_cpus)
 
 def iter_real_shards(real_glob, max_shards=None):
@@ -121,6 +122,16 @@ def main():
     synth_joint_ec = np.zeros((E, C), dtype=np.int64)
 
     sev, sdt, scpu = load_synth_npz(args.synth)
+
+    # Optional sanity warning (does not change results; just informs you)
+    if scpu.max() >= C or scpu.min() < 0:
+        print(
+            f"[WARN] Synth cpu out of range: min={int(scpu.min())}, max={int(scpu.max())}, expected [0, {C - 1}]. Clipping during evaluation.")
+    if sev.max() >= E or sev.min() < 0:
+        print(f"[WARN] Synth event out of range: min={int(sev.min())}, max={int(sev.max())}, expected [0, {E - 1}].")
+    if sdt.max() >= D or sdt.min() < 0:
+        print(f"[WARN] Synth dt out of range: min={int(sdt.min())}, max={int(sdt.max())}, expected [0, {D - 1}].")
+
     accumulate_from_arrays(sev, sdt, scpu, E, D, C,
                            synth_marg_e, synth_marg_d, synth_marg_c,
                            synth_bigram_e, synth_bigram_c,

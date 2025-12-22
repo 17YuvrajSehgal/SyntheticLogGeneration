@@ -1,4 +1,4 @@
-# sample_autoregressive.py
+# autoregressive_transformer/sample_autoregressive.py
 import os
 import glob
 import argparse
@@ -9,91 +9,52 @@ from dataset_processing.trace_embedding import TraceEmbedding
 from diffusion_model.heads import TokenHeads
 from autoregressive_transformer.autoregressive_transformer import ARTransformer
 
-
 def ensure_dir(path: str):
     d = os.path.dirname(path)
     if d:
         os.makedirs(d, exist_ok=True)
 
-
 def _load_first_tokens_npz(npz_path: str):
-    """
-    Returns first tokens [N, 3] from a shard as int64:
-      columns: event, dt, cpu
-    """
     d = np.load(npz_path)
     ev0 = d["event"][:, 0].astype(np.int64)
     dt0 = d["dt"][:, 0].astype(np.int64)
     cp0 = d["cpu"][:, 0].astype(np.int64)
+    d.close()
     return np.stack([ev0, dt0, cp0], axis=1)
 
-
-def sample_first_tokens_from_real(
-    root_shards: str,
-    benchmark: str,
-    split: str,
-    B: int,
-    max_shards: int = 10,
-    seed: int = 0,
-):
-    """
-    Samples B first-step tokens from real shards (split) to seed x[:,0,:].
-    This avoids artificial BOS=(0,0,0) bias.
-    """
+def sample_first_tokens_from_real(root_shards, benchmark, split, B, max_shards=10, seed=0):
     rng = np.random.default_rng(seed)
     pattern = os.path.join(root_shards, benchmark, split, "*.npz")
     shard_paths = sorted(glob.glob(pattern))
     if not shard_paths:
         raise FileNotFoundError(f"No shards found for pattern: {pattern}")
-
     shard_paths = shard_paths[:max_shards]
 
     first_tokens = []
     for p in shard_paths:
         first_tokens.append(_load_first_tokens_npz(p))
+    first_tokens = np.concatenate(first_tokens, axis=0)  # [M,3]
 
-    first_tokens = np.concatenate(first_tokens, axis=0)  # [M, 3]
     idx = rng.integers(0, first_tokens.shape[0], size=B)
-    return first_tokens[idx]  # [B, 3]
-
+    return first_tokens[idx]  # [B,3]
 
 @torch.no_grad()
-def sample_ar(
-    ar_model,
-    heads,
-    num_samples,
-    seq_len,
-    device,
-    num_events,
-    num_dt_buckets,
-    num_cpus,
-    temperature=1.0,
-    greedy=True,
-    x0: torch.Tensor | None = None,
-):
-    """
-    Generates [B, L, 3] token ids autoregressively.
-    If x0 is provided, it seeds x[:,0,:] with real first tokens (recommended).
-    Otherwise defaults to BOS=(0,0,0).
-    """
+def sample_ar(ar_model, heads, num_samples, seq_len, device,
+              num_events, num_dt_buckets, num_cpus,
+              temperature=1.0, greedy=True, x0=None):
     B = num_samples
     L = seq_len
-
-    # output tokens
     x = torch.zeros((B, L, 3), dtype=torch.long, device=device)
 
-    # seed first token if provided
     if x0 is not None:
-        if x0.ndim != 2 or x0.shape[0] != B or x0.shape[1] != 3:
+        if x0.ndim != 2 or x0.shape != (B, 3):
             raise ValueError(f"x0 must be [B,3], got {tuple(x0.shape)}")
         x[:, 0, :] = x0.to(device=device, dtype=torch.long)
 
     for t in range(0, L - 1):
-        # run model on prefix length t+1
-        h = ar_model(x[:, :t+1, :])        # [B, t+1, D]
-        logits = heads(h)                  # dict [B, t+1, V]
+        h = ar_model(x[:, :t+1, :])  # [B, t+1, D]
+        logits = heads(h)
 
-        # predict next token at position t (which corresponds to next index t+1)
         ev_logits = logits["event"][:, -1, :] / max(1e-8, temperature)
         dt_logits = logits["dt"][:, -1, :] / max(1e-8, temperature)
         cp_logits = logits["cpu"][:, -1, :] / max(1e-8, temperature)
@@ -111,7 +72,7 @@ def sample_ar(
         x[:, t+1, 1] = dt
         x[:, t+1, 2] = cp
 
-    # hard range checks
+    # range checks
     ev_min, ev_max = int(x[..., 0].min()), int(x[..., 0].max())
     dt_min, dt_max = int(x[..., 1].min()), int(x[..., 1].max())
     cp_min, cp_max = int(x[..., 2].min()), int(x[..., 2].max())
@@ -124,13 +85,13 @@ def sample_ar(
 
     return x
 
-
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--ckpt", required=True)
     ap.add_argument("--out", required=True)
 
     ap.add_argument("--num_samples", type=int, default=1000)
+    ap.add_argument("--batch_samples", type=int, default=256, help="Generate this many sequences per batch on GPU.")
     ap.add_argument("--seq_len", type=int, default=200)
 
     ap.add_argument("--d_model", type=int, default=256)
@@ -145,17 +106,11 @@ def main():
     ap.add_argument("--temperature", type=float, default=1.0)
     ap.add_argument("--greedy", action="store_true")
 
-    # recommended: seed first token from real data to avoid BOS bias
-    ap.add_argument("--seed_from_real", action="store_true",
-                    help="Initialize x[:,0,:] from real first-token distribution instead of (0,0,0).")
-    ap.add_argument("--root_shards", default="window_shards",
-                    help="Root directory containing benchmark/{train,val,test} NPZ shards.")
-    ap.add_argument("--benchmark", default="compress-gzip",
-                    help="Benchmark name under root_shards.")
-    ap.add_argument("--seed_split", default="train", choices=["train", "val", "test"],
-                    help="Which split to sample the first token from.")
-    ap.add_argument("--max_seed_shards", type=int, default=10,
-                    help="How many shards to scan when building the seed distribution.")
+    ap.add_argument("--seed_from_real", action="store_true")
+    ap.add_argument("--root_shards", default="window_shards")
+    ap.add_argument("--benchmark", default="compress-gzip")
+    ap.add_argument("--seed_split", default="train", choices=["train", "val", "test"])
+    ap.add_argument("--max_seed_shards", type=int, default=10)
 
     args = ap.parse_args()
 
@@ -200,37 +155,60 @@ def main():
     ar_model.eval()
     heads.eval()
 
-    # build optional x0 seed from real shards
-    x0 = None
-    if args.seed_from_real:
-        x0_np = sample_first_tokens_from_real(
-            root_shards=args.root_shards,
-            benchmark=args.benchmark,
-            split=args.seed_split,
-            B=args.num_samples,
-            max_shards=args.max_seed_shards,
-            seed=args.seed,
+    B = args.num_samples
+    L = args.seq_len
+
+    # CPU outputs
+    out_event = np.empty((B, L), dtype=np.int32)
+    out_dt    = np.empty((B, L), dtype=np.uint8)
+    out_cpu   = np.empty((B, L), dtype=np.uint8)
+
+    bs = max(1, int(args.batch_samples))
+    print(f"[INFO] Sampling {B} windows in batches of {bs}...")
+
+    start = 0
+    while start < B:
+        end = min(B, start + bs)
+        b = end - start
+
+        x0 = None
+        if args.seed_from_real:
+            x0_np = sample_first_tokens_from_real(
+                root_shards=args.root_shards,
+                benchmark=args.benchmark,
+                split=args.seed_split,
+                B=b,
+                max_shards=args.max_seed_shards,
+                seed=args.seed + start,  # vary per-batch
+            )
+            x0 = torch.from_numpy(x0_np)
+
+        x = sample_ar(
+            ar_model, heads,
+            num_samples=b,
+            seq_len=L,
+            device=device,
+            num_events=args.num_events,
+            num_dt_buckets=args.num_dt_buckets,
+            num_cpus=args.num_cpus,
+            temperature=args.temperature,
+            greedy=args.greedy,
+            x0=x0,
         )
-        x0 = torch.from_numpy(x0_np)
 
-    x = sample_ar(
-        ar_model, heads,
-        num_samples=args.num_samples,
-        seq_len=args.seq_len,
-        device=device,
-        num_events=args.num_events,
-        num_dt_buckets=args.num_dt_buckets,
-        num_cpus=args.num_cpus,
-        temperature=args.temperature,
-        greedy=args.greedy,
-        x0=x0,
-    )
+        x_cpu = x.to("cpu", non_blocking=True).numpy()
+        out_event[start:end] = x_cpu[..., 0].astype(np.int32)
+        out_dt[start:end]    = x_cpu[..., 1].astype(np.uint8)
+        out_cpu[start:end]   = x_cpu[..., 2].astype(np.uint8)
 
-    # write npz like diffusion
-    x_cpu = x.to("cpu").numpy()
-    out_event = x_cpu[..., 0].astype(np.int32)
-    out_dt    = x_cpu[..., 1].astype(np.uint8)
-    out_cpu   = x_cpu[..., 2].astype(np.uint8)
+        del x, x_cpu
+        if device == "cuda":
+            torch.cuda.empty_cache()
+
+        if (start // bs) % 10 == 0:
+            print(f"[INFO] done {end}/{B}")
+
+        start = end
 
     ensure_dir(args.out)
     np.savez_compressed(args.out, event=out_event, dt=out_dt, cpu=out_cpu)
@@ -238,7 +216,6 @@ def main():
     print("[RANGE] event:", int(out_event.min()), int(out_event.max()))
     print("[RANGE] dt   :", int(out_dt.min()), int(out_dt.max()))
     print("[RANGE] cpu  :", int(out_cpu.min()), int(out_cpu.max()))
-
 
 if __name__ == "__main__":
     main()

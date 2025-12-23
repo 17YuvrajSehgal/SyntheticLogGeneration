@@ -1,0 +1,50 @@
+(.venv) [yuvraj17@l2.nibi SyntheticLogGeneration]$ python transition_eval.py --real_glob "window_shards/comp
+ress-gzip/test/*.npz" --synth "art_outputs/generated_traces/ar/compress-gzip/synth_100k.npz" --max_real_shards 50 --num_events 380 --num_dt_buckets 256 --num_cpus 4 --topk_events_dt 30 --min_occ_dt 5000
+Real shards used: 20
+Synth windows: 100000 seq_len: 200
+
+=== Marginal KL (RealAgg || Synth) ===
+Event KL: 0.004839587588512017
+DT KL   : 0.02424823894906315
+CPU KL  : 0.17947659234941812
+
+=== Event Transition Matrix: P(e_{t+1} | e_t) ===
+Weighted row KL (real-supported rows only): 0.10244090015477583
+L1 distance     : 235.2331672974792
+Frobenius norm   : 8.252870922164071
+Cosine similarity: 0.7551424464494002
+=== CPU Transition Matrix: P(c_{t+1} | c_t) ===
+Weighted row KL: 0.033357690657335425
+L1 distance     : 0.51674984341444
+Frobenius norm  : 0.17016676069462489
+Cosine similarity: 0.9951071322205811
+=== Joint Event-CPU: P(event, cpu) ===
+KL (Real||Synth): 0.31371681550089703
+L1 distance     : 0.5349439168091653
+Cosine similarity: 0.8183639931295991
+=== Timing conditioned on event: P(dt | event=e) ===
+Using topK=30, min_occ=5000, actual_used=30
+Mean KL(dt|e): 0.1693560682076467
+Median KL(dt|e): 0.14641005415229869
+Worst 10 events by KL(dt|e):
+  event= 17  KL=0.4993  real_occ=18338948  synth_occ=938109
+  event=  2  KL=0.4439  real_occ=17089004  synth_occ=878720
+  event= 33  KL=0.3974  real_occ=1186182  synth_occ=55269
+  event= 13  KL=0.3677  real_occ=20815709  synth_occ=1094488
+  event= 34  KL=0.3416  real_occ=1186182  synth_occ=55095
+  event=  3  KL=0.3089  real_occ=17089004  synth_occ=894370
+  event=  7  KL=0.2268  real_occ=35962076  synth_occ=1821438
+  event= 14  KL=0.2077  real_occ=20815712  synth_occ=1092578
+  event= 23  KL=0.2075  real_occ=2456359  synth_occ=119510
+  event=  0  KL=0.1943  real_occ=23410010  synth_occ=999676
+=== Most mismatched event transition rows (by KL, real_count>0) ===
+  event=197 row_KL=27.4079  real_count=256  synth_count=4
+  event=262 row_KL=27.3433  real_count=64  synth_count=3
+  event=299 row_KL=27.2256  real_count=32  synth_count=2
+  event=300 row_KL=26.9379  real_count=32  synth_count=1
+  event=293 row_KL=26.9379  real_count=16  synth_count=1
+  event=263 row_KL=26.9345  real_count=48  synth_count=2
+  event=267 row_KL=26.8488  real_count=32  synth_count=2
+  event=258 row_KL=26.7164  real_count=56  synth_count=2
+  event=266 row_KL=26.6502  real_count=32  synth_count=3
+  event=123 row_KL=26.6477  real_count=40  synth_count=4

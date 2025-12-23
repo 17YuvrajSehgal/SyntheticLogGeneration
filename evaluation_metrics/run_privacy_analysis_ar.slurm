@@ -38,8 +38,9 @@ python -u evaluation_metrics/privacy_analysis.py \
   --max_synth_windows 100000 \
   --distance_metric euclidean \
   --check_synth_diversity \
-  --output_dir evaluation_metrics/privacy_analysis_full_100k_fast \
+  --output_dir evaluation_metrics/privacy_analysis_ar_100k \
   --seed 42
+
 
 echo "Job finished on: $(date)"
 ls -lh evaluation_metrics/privacy_analysis_full_100k_fast || true

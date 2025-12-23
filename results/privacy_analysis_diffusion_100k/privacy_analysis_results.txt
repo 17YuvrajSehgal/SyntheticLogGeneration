@@ -1,0 +1,33 @@
+Privacy Analysis Results
+======================================================================
+Real data pattern: window_shards/compress-gzip/train/*.npz
+Synthetic data: generated_traces/discrete/compress-gzip/synth_100k_step50k.npz
+Distance metric: euclidean
+
+Synthetic -> Real Statistics:
+  mean: 8.894573
+  median: 7.988416
+  std: 4.271808
+  min: 1.127110
+  max: 41.351483
+  q25: 5.926323
+  q75: 10.583127
+  q95: 18.008384
+  q99: 23.369121
+  very_close_pct: 0.000000
+  close_pct: 0.000000
+
+Synthetic -> Synthetic Statistics:
+  mean: 0.951653
+  median: 0.885847
+  std: 0.357616
+  min: 0.149823
+  max: 7.445559
+  q25: 0.706680
+  q75: 1.142254
+  q95: 1.579029
+  q99: 2.088697
+  very_close_pct: 0.000000
+  close_pct: 4.950000
+
+Exact matches: 0

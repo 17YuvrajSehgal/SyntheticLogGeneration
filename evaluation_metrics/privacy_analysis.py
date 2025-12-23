@@ -404,3 +404,9 @@ if __name__ == '__main__':
     main()
 
 #python evaluation_metrics/privacy_analysis.py --real_glob "window_shards/compress-gzip/train/*.npz" --synth "art_outputs/generated_traces/ar/compress-gzip/synth_100k.npz" --max_real_windows 20000 --max_synth_windows 10000 --distance_metric euclidean --check_synth_diversity --check_exact_matches --output_dir evaluation_metrics/privacy_analysis_compress_gzip --seed 42
+
+# to check for ALL 100K Synthetic Samples
+#python evaluation_metrics/privacy_analysis.py --real_glob "window_shards/compress-gzip/train/*.npz" --synth "art_outputs/generated_traces/ar/compress-gzip/synth_100k.npz" --max_real_windows 50000 --max_synth_windows 100000 --distance_metric euclidean --check_synth_diversity --check_exact_matches --output_dir evaluation_metrics/privacy_analysis_full_100k --seed 42
+
+#Option 2: Quick Check Without Exact Match Detection (Much Faster)
+#python evaluation_metrics/privacy_analysis.py --real_glob "window_shards/compress-gzip/train/*.npz" --synth "art_outputs/generated_traces/ar/compress-gzip/synth_100k.npz" --max_real_windows 30000 --max_synth_windows 100000 --distance_metric euclidean --check_synth_diversity --output_dir evaluation_metrics/privacy_analysis_full_100k_fast --seed 42

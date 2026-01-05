@@ -46,7 +46,7 @@ echo "========================================"
 python -u -m autoregressive_transformer.train_autoregressive \
   --benchmark "$BENCH" \
   --root_shards dataset/window_shards \
-  --steps 50000 \
+  --steps 20000 \
   --batch_size 64 \
   --lr 2e-4 \
   --seq_len 200 \

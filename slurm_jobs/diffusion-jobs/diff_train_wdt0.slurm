@@ -67,6 +67,7 @@ trap "echo 'Stopping GPU logger'; kill $GPU_LOG_PID 2>/dev/null || true" EXIT
 # -------- Training --------
 python -u -m diffusion_model.train_discrete_heads \
   --benchmark "$BENCH" \
+  --root_shards dataset/window_shards \
   --steps 50000 \
   --batch_size 64 \
   --num_events 380 \

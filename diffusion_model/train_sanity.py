@@ -2,8 +2,8 @@ import os
 import torch
 from torch.optim import AdamW
 
-from dataset_processing.npz_shard_dataset import make_dataloaders
-from dataset_processing.trace_embedding import TraceEmbedding
+from synthetic_data_processing.npz_shard_dataset import make_dataloaders
+from synthetic_data_processing.trace_embedding import TraceEmbedding
 from diffusion_model.ddpm_train import DDPM, train_one_step
 from diffusion_model.diffusion_denoiser import TransformerDenoiser
 

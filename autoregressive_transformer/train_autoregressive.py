@@ -5,8 +5,8 @@ import torch
 import torch.nn.functional as F
 from torch.optim import AdamW
 
-from dataset_processing.npz_shard_dataset import make_dataloaders
-from dataset_processing.trace_embedding import TraceEmbedding
+from synthetic_data_processing.npz_shard_dataset import make_dataloaders
+from synthetic_data_processing.trace_embedding import TraceEmbedding
 from diffusion_model.heads import TokenHeads  # reuse your heads
 from autoregressive_transformer.autoregressive_transformer import ARTransformer
 

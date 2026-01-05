@@ -5,7 +5,7 @@ import argparse
 import numpy as np
 import torch
 
-from dataset_processing.trace_embedding import TraceEmbedding
+from synthetic_data_processing.trace_embedding import TraceEmbedding
 from diffusion_model.heads import TokenHeads
 from autoregressive_transformer.autoregressive_transformer import ARTransformer
 

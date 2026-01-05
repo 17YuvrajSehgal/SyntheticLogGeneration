@@ -1,0 +1,11 @@
+===== Babeltrace2 dump job =====
+Job ID: 5811922
+Node: c421
+Time: Sat Dec 13 06:38:12 EST 2025
+================================
+Input base: /home/yuvraj17/scratch/unzipped-benchmarks/phpbench/phpbench
+
+Output dir: /home/yuvraj17/scratch/unzipped-benchmarks/phpbench/phpbench
+/txt_traces
+
+/var/spool/slurmd/job5811922/slurm_script: line 47: syntax error near unexpected token `-all-events-run*/kernel'

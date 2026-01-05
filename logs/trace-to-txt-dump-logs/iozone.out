@@ -1,0 +1,43 @@
+===== Babeltrace2 dump job =====
+Job ID: 5811921
+Node: c365
+Time: Sat Dec 13 06:38:12 EST 2025
+================================
+Input base: /home/yuvraj17/scratch/unzipped-benchmarks/iozone/iozone
+Output dir: /home/yuvraj17/scratch/unzipped-benchmarks/iozone/iozone/txt_traces
+
+Dumping iozone-all-events-run0 -> /home/yuvraj17/scratch/unzipped-benchmarks/iozone/iozone/txt_traces/iozone-all-events-run0.txt
+Dumping iozone-all-events-run1 -> /home/yuvraj17/scratch/unzipped-benchmarks/iozone/iozone/txt_traces/iozone-all-events-run1.txt
+Dumping iozone-all-events-run10 -> /home/yuvraj17/scratch/unzipped-benchmarks/iozone/iozone/txt_traces/iozone-all-events-run10.txt
+Dumping iozone-all-events-run11 -> /home/yuvraj17/scratch/unzipped-benchmarks/iozone/iozone/txt_traces/iozone-all-events-run11.txt
+Dumping iozone-all-events-run12 -> /home/yuvraj17/scratch/unzipped-benchmarks/iozone/iozone/txt_traces/iozone-all-events-run12.txt
+Dumping iozone-all-events-run13 -> /home/yuvraj17/scratch/unzipped-benchmarks/iozone/iozone/txt_traces/iozone-all-events-run13.txt
+Dumping iozone-all-events-run14 -> /home/yuvraj17/scratch/unzipped-benchmarks/iozone/iozone/txt_traces/iozone-all-events-run14.txt
+Dumping iozone-all-events-run15 -> /home/yuvraj17/scratch/unzipped-benchmarks/iozone/iozone/txt_traces/iozone-all-events-run15.txt
+Dumping iozone-all-events-run16 -> /home/yuvraj17/scratch/unzipped-benchmarks/iozone/iozone/txt_traces/iozone-all-events-run16.txt
+Dumping iozone-all-events-run17 -> /home/yuvraj17/scratch/unzipped-benchmarks/iozone/iozone/txt_traces/iozone-all-events-run17.txt
+Dumping iozone-all-events-run18 -> /home/yuvraj17/scratch/unzipped-benchmarks/iozone/iozone/txt_traces/iozone-all-events-run18.txt
+Dumping iozone-all-events-run19 -> /home/yuvraj17/scratch/unzipped-benchmarks/iozone/iozone/txt_traces/iozone-all-events-run19.txt
+Dumping iozone-all-events-run2 -> /home/yuvraj17/scratch/unzipped-benchmarks/iozone/iozone/txt_traces/iozone-all-events-run2.txt
+Dumping iozone-all-events-run20 -> /home/yuvraj17/scratch/unzipped-benchmarks/iozone/iozone/txt_traces/iozone-all-events-run20.txt
+Dumping iozone-all-events-run21 -> /home/yuvraj17/scratch/unzipped-benchmarks/iozone/iozone/txt_traces/iozone-all-events-run21.txt
+Dumping iozone-all-events-run22 -> /home/yuvraj17/scratch/unzipped-benchmarks/iozone/iozone/txt_traces/iozone-all-events-run22.txt
+Dumping iozone-all-events-run23 -> /home/yuvraj17/scratch/unzipped-benchmarks/iozone/iozone/txt_traces/iozone-all-events-run23.txt
+Dumping iozone-all-events-run24 -> /home/yuvraj17/scratch/unzipped-benchmarks/iozone/iozone/txt_traces/iozone-all-events-run24.txt
+Dumping iozone-all-events-run25 -> /home/yuvraj17/scratch/unzipped-benchmarks/iozone/iozone/txt_traces/iozone-all-events-run25.txt
+Dumping iozone-all-events-run26 -> /home/yuvraj17/scratch/unzipped-benchmarks/iozone/iozone/txt_traces/iozone-all-events-run26.txt
+Dumping iozone-all-events-run27 -> /home/yuvraj17/scratch/unzipped-benchmarks/iozone/iozone/txt_traces/iozone-all-events-run27.txt
+Dumping iozone-all-events-run28 -> /home/yuvraj17/scratch/unzipped-benchmarks/iozone/iozone/txt_traces/iozone-all-events-run28.txt
+Dumping iozone-all-events-run29 -> /home/yuvraj17/scratch/unzipped-benchmarks/iozone/iozone/txt_traces/iozone-all-events-run29.txt
+Dumping iozone-all-events-run3 -> /home/yuvraj17/scratch/unzipped-benchmarks/iozone/iozone/txt_traces/iozone-all-events-run3.txt
+Dumping iozone-all-events-run30 -> /home/yuvraj17/scratch/unzipped-benchmarks/iozone/iozone/txt_traces/iozone-all-events-run30.txt
+Dumping iozone-all-events-run31 -> /home/yuvraj17/scratch/unzipped-benchmarks/iozone/iozone/txt_traces/iozone-all-events-run31.txt
+Dumping iozone-all-events-run4 -> /home/yuvraj17/scratch/unzipped-benchmarks/iozone/iozone/txt_traces/iozone-all-events-run4.txt
+Dumping iozone-all-events-run5 -> /home/yuvraj17/scratch/unzipped-benchmarks/iozone/iozone/txt_traces/iozone-all-events-run5.txt
+Dumping iozone-all-events-run6 -> /home/yuvraj17/scratch/unzipped-benchmarks/iozone/iozone/txt_traces/iozone-all-events-run6.txt
+Dumping iozone-all-events-run7 -> /home/yuvraj17/scratch/unzipped-benchmarks/iozone/iozone/txt_traces/iozone-all-events-run7.txt
+Dumping iozone-all-events-run8 -> /home/yuvraj17/scratch/unzipped-benchmarks/iozone/iozone/txt_traces/iozone-all-events-run8.txt
+Dumping iozone-all-events-run9 -> /home/yuvraj17/scratch/unzipped-benchmarks/iozone/iozone/txt_traces/iozone-all-events-run9.txt
+
+Done. Wrote 32 txt files into /home/yuvraj17/scratch/unzipped-benchmarks/iozone/iozone/txt_traces
+Finished at: Sat Dec 13 06:51:30 EST 2025

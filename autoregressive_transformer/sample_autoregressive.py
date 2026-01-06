@@ -107,7 +107,7 @@ def main():
     ap.add_argument("--greedy", action="store_true")
 
     ap.add_argument("--seed_from_real", action="store_true")
-    ap.add_argument("--root_shards", default="window_shards")
+    ap.add_argument("--root_shards", default="dataset/window_shards")
     ap.add_argument("--benchmark", default="compress-gzip")
     ap.add_argument("--seed_split", default="train", choices=["train", "val", "test"])
     ap.add_argument("--max_seed_shards", type=int, default=10)

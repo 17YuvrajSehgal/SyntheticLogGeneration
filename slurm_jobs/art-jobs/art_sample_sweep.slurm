@@ -19,7 +19,7 @@ source "$REPO/.venv/bin/activate"
 export PYTHONUNBUFFERED=1
 
 BENCH="compress-gzip"
-ROOT_SHARDS="window_shards"
+ROOT_SHARDS="dataset/window_shards"
 
 # How many windows to generate per config
 NUM_SAMPLES=20000

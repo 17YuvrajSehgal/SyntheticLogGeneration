@@ -1,0 +1,54 @@
+========== DIFF SAMPLE ==========
+Time: Tue Jan  6 14:28:09 EST 2026
+Host: g10.nibi.sharcnet
+PWD : /project/def-naser2/yuvraj/SyntheticLogGeneration
+RUN : diff-wcpu2
+CKPT: /project/def-naser2/yuvraj/SyntheticLogGeneration/outputs/diffusion_outputs/diff-wcpu2/checkpoints_discrete/compress-gzip/final_step_020000.pt
+OUT : /project/def-naser2/yuvraj/SyntheticLogGeneration/outputs/diffusion_outputs/diff-wcpu2/generated_traces/discrete/compress-gzip/diff-wcpu2_synth_20000_L200_T500_bs128.npz
+torch: 2.9.0 cuda: True
+Tue Jan  6 14:28:14 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.82.07              Driver Version: 580.82.07      CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA H100 80GB HBM3          On  |   00000000:BB:00.0 Off |                    0 |
+| N/A   30C    P0             72W /  700W |       0MiB /  81559MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+=================================
+Device: cuda
+[INFO] Sampling 20000 windows (L=200) in batches of 128 ...
+[INFO] done 1280/20000
+[INFO] done 2560/20000
+[INFO] done 3840/20000
+[INFO] done 5120/20000
+[INFO] done 6400/20000
+[INFO] done 7680/20000
+[INFO] done 8960/20000
+[INFO] done 10240/20000
+[INFO] done 11520/20000
+[INFO] done 12800/20000
+[INFO] done 14080/20000
+[INFO] done 15360/20000
+[INFO] done 16640/20000
+[INFO] done 17920/20000
+[INFO] done 19200/20000
+[INFO] done 20000/20000
+[WRITE] /project/def-naser2/yuvraj/SyntheticLogGeneration/outputs/diffusion_outputs/diff-wcpu2/generated_traces/discrete/compress-gzip/diff-wcpu2_synth_20000_L200_T500_bs128.npz (20000, 200)
+[RANGE] event: 0 345
+[RANGE] dt   : 0 253
+[RANGE] cpu  : 0 3
+event (20000, 200) int32 min 0 max 345
+dt (20000, 200) uint8 min 0 max 253
+cpu (20000, 200) uint8 min 0 max 3

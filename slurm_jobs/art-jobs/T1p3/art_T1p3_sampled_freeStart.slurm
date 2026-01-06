@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=art-T0p7-samp-free
+#SBATCH --job-name=art-T1p3-samp-free
 #SBATCH --account=def-naser2
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=4
@@ -28,7 +28,7 @@ BATCH_SAMPLES=128
 SEQ_LEN=200
 TEMP=1.3
 
-GENDIR="$REPO/outputs/art_outputs/$RUN_NAME/generated_traces/ar/$BENCH/T0p7"
+GENDIR="$REPO/outputs/art_outputs/$RUN_NAME/generated_traces/ar/$BENCH/T1p3"
 mkdir -p "$GENDIR"
 
 OUTFILE="$GENDIR/synth_${NUM_SAMPLES}_T${TEMP}_sampled_freeStart.npz"

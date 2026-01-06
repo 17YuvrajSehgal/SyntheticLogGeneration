@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=art-T0p7-samp-seeded
+#SBATCH --job-name=art-T1p0-samp-seeded
 #SBATCH --account=def-naser2
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=4
@@ -30,7 +30,7 @@ SEQ_LEN=200
 TEMP=1
 
 RUN_OUT="$REPO/outputs/art_outputs/$RUN_NAME"
-GENDIR="$RUN_OUT/generated_traces/ar/$BENCH/T0p7"
+GENDIR="$RUN_OUT/generated_traces/ar/$BENCH/T1p0"
 mkdir -p "$GENDIR"
 
 OUTFILE="$GENDIR/synth_${NUM_SAMPLES}_T${TEMP}_sampled_seededReal.npz"

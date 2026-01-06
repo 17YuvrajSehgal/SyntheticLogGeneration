@@ -4,7 +4,7 @@
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=32G
-#SBATCH --time=04:00:00
+#SBATCH --time=06:00:00
 #SBATCH --output=/project/def-naser2/yuvraj/SyntheticLogGeneration/art_logs/%x-%j.out
 #SBATCH --error=/project/def-naser2/yuvraj/SyntheticLogGeneration/art_logs/%x-%j.err
 
@@ -64,7 +64,7 @@ echo "[INFO] Using checkpoint:"
 echo "       $BEST_CKPT"
 
 # ---- Sample ----
-python -u -m autoregressive_transformer.sample_autoregressive --ckpt "$BEST_CKPT" --out "$GENDIR/synth_100k.npz" --num_samples 100000 --batch_samples 64 --seq_len 200 --d_model 256 --nhead 8 --num_layers 6 --num_events 380 --num_dt_buckets 256 --num_cpus 4 --temperature 1.0 --seed_from_real --root_shards window_shards --benchmark compress-gzip --seed_split train --max_seed_shards 10
+python -u -m autoregressive_transformer.sample_autoregressive --ckpt "$BEST_CKPT" --out "$GENDIR/synth_100k.npz" --num_samples 100000 --batch_samples 64 --seq_len 200 --d_model 256 --nhead 8 --num_layers 6 --num_events 380 --num_dt_buckets 256 --num_cpus 4 --temperature 1.0 --seed_from_real --root_shards "dataset/window_shards" --benchmark "$BENCH" --seed_split train --max_seed_shards 10
 
 echo "[INFO] Generated file:"
 ls -lh "$GENDIR/synth_200_sanity.npz"

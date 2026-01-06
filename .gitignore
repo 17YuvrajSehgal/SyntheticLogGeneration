@@ -2,3 +2,5 @@
 .venv
 llm_suggested_research_papers
 dataset/parquet_files_dataset
+
+__pycache__/

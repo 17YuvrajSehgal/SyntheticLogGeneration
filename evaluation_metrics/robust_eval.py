@@ -498,7 +498,17 @@ def main():
             f.write(",".join(str(row[c]) for c in cols) + "\n")
 
     # Write JSON
+    # Write JSON
     json_path = os.path.join(repo, args.out_dir, f"robust_eval_{bench}_{args.split}.json")
+
+    def _json_default(o):
+        import numpy as np
+        if isinstance(o, np.ndarray):
+            return o.tolist()
+        if isinstance(o, (np.integer, np.floating, np.bool_)):
+            return o.item()
+        return str(o)  # fallback (e.g., Path objects)
+
     payload = {
         "bench": bench,
         "split": args.split,
@@ -507,8 +517,9 @@ def main():
         "top_ranked": [{"path": r.path, "score": score(r)} for r in ranked[:10]],
         "results": [asdict(r) for r in results],
     }
+
     with open(json_path, "w", encoding="utf-8") as f:
-        json.dump(payload, f, indent=2)
+        json.dump(payload, f, indent=2, default=_json_default)
 
     print()
     print("[WROTE]", csv_path)

@@ -161,3 +161,11 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
+# python3 SyntheticLogGeneration/dataset/build_vocab.py \
+#   --root "/home/yuvraj17/scratch/txt_traces_all_benchmarks" \
+#   --glob "*-all-events-run*.txt" \
+#   --out_dir "/home/yuvraj17/scratch/SyntheticLogGeneration/dataset/metadata_all_events" \
+#   --min_count 1 \
+#   --sort freq

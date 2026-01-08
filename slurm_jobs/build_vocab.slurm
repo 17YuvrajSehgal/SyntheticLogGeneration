@@ -20,7 +20,7 @@ mkdir -p "$OUT_DIR"
 
 cd "$PROJECT_DIR"
 
-python -u -m "$SCRIPT" \
+python -u "$SCRIPT" \
   --root "$ROOT_DIR" \
   --glob "*-all-events-run*.txt" \
   --out_dir "$OUT_DIR" \

@@ -9,7 +9,7 @@
 
 set -euo pipefail
 
-PROJECT_DIR="$SCRATCH/SyntheticLogGeneration"
+PROJECT_DIR="/project/def-naser2/yuvraj/SyntheticLogGeneration"
 SCRIPT="$PROJECT_DIR/dataset/build_vocab.py"
 
 ROOT_DIR="$SCRATCH/txt_traces_all_benchmarks"

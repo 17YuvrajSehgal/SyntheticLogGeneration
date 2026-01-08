@@ -1,0 +1,6 @@
+[INFO] Found 288 files. Scanning...
+[OK] Wrote:
+  - /project/6083487/yuvraj/SyntheticLogGeneration/dataset/metadata_all_events/vocab.json
+  - /project/6083487/yuvraj/SyntheticLogGeneration/dataset/metadata_all_events/id_to_event.json
+  - /project/6083487/yuvraj/SyntheticLogGeneration/dataset/metadata_all_events/vocab_stats.json
+[INFO] Unique events: 384 | Total counted: 2860860219

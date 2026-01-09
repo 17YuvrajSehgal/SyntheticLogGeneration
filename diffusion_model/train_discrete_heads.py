@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from torch.optim import AdamW
 
 from synthetic_data_processing.npz_shard_dataset import make_dataloaders
-from synthetic_data_processing.trace_embedding import TraceEmbedding
+from dataset.trace_embedding import TraceEmbedding
 
 from diffusion_model.diffusion_denoiser import TransformerDenoiser
 from diffusion_model.ddpm_train import DDPM, diffusion_step_losses

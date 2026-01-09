@@ -3,7 +3,7 @@ import argparse
 import numpy as np
 import torch
 
-from synthetic_data_processing.trace_embedding import TraceEmbedding
+from dataset.trace_embedding import TraceEmbedding
 from diffusion_model.diffusion_denoiser import TransformerDenoiser
 from diffusion_model.ddpm_train import DDPM
 from diffusion_model.heads import TokenHeads

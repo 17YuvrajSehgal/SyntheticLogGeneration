@@ -26,7 +26,7 @@ echo "PWD:  $(pwd)"
 # Here we default to compress-gzip as an example.
 
 python -u -m synthetic_data_processing.learn_constraints \
-  --real_glob "window_shards/compress-gzip/train/*.npz" \
+  --real_glob "dataset/window_shards/compress-gzip/train/*.npz" \
   --output "dataset/constraints.json" \
   --num_events 384 \
   --num_dt_buckets 256 \

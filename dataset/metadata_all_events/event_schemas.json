@@ -1,0 +1,4563 @@
+{
+  "kmem_kmalloc": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "bytes_alloc",
+        "bytes_req",
+        "call_site",
+        "cpu_id",
+        "gfp_flags",
+        "ptr"
+      ],
+      "count": 18437242
+    }
+  ],
+  "kmem_kfree": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "call_site",
+        "cpu_id",
+        "ptr"
+      ],
+      "count": 23853621
+    }
+  ],
+  "sched_waking": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "comm",
+        "cpu_id",
+        "prio",
+        "target_cpu",
+        "tid"
+      ],
+      "count": 6952926
+    }
+  ],
+  "sched_wakeup": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "comm",
+        "cpu_id",
+        "prio",
+        "target_cpu",
+        "tid"
+      ],
+      "count": 6952918
+    }
+  ],
+  "power_cpu_idle": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "state"
+      ],
+      "count": 14241135
+    }
+  ],
+  "rcu_utilization": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "s"
+      ],
+      "count": 44999207
+    }
+  ],
+  "sched_switch": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "next_comm",
+        "next_prio",
+        "next_tid",
+        "prev_comm",
+        "prev_prio",
+        "prev_state",
+        "prev_tid"
+      ],
+      "count": 13839111
+    }
+  ],
+  "syscall_exit_epoll_wait": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "events",
+        "ret"
+      ],
+      "count": 85247
+    }
+  ],
+  "kmem_mm_page_alloc": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "gfp_flags",
+        "migratetype",
+        "order",
+        "page",
+        "pfn"
+      ],
+      "count": 219939854
+    }
+  ],
+  "kmem_cache_alloc_node": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "bytes_alloc",
+        "bytes_req",
+        "call_site",
+        "cpu_id",
+        "gfp_flags",
+        "node",
+        "ptr"
+      ],
+      "count": 1402020
+    }
+  ],
+  "kmem_cache_alloc": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "bytes_alloc",
+        "bytes_req",
+        "call_site",
+        "cpu_id",
+        "gfp_flags",
+        "ptr"
+      ],
+      "count": 179312274
+    }
+  ],
+  "syscall_entry_ioctl": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "arg",
+        "cmd",
+        "cpu_id",
+        "fd"
+      ],
+      "count": 245940
+    }
+  ],
+  "x86_irq_vectors_call_function_entry": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "vector"
+      ],
+      "count": 85584
+    }
+  ],
+  "x86_irq_vectors_call_function_exit": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "vector"
+      ],
+      "count": 85584
+    }
+  ],
+  "syscall_exit_ioctl": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "arg",
+        "cpu_id",
+        "ret"
+      ],
+      "count": 245940
+    }
+  ],
+  "kmem_cache_free": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "call_site",
+        "cpu_id",
+        "ptr"
+      ],
+      "count": 180184000
+    }
+  ],
+  "syscall_entry_splice": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "fd_in",
+        "fd_out",
+        "flags",
+        "len",
+        "off_in",
+        "off_out"
+      ],
+      "count": 2764519
+    }
+  ],
+  "syscall_exit_splice": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 2764493
+    }
+  ],
+  "writeback_mark_inode_dirty": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "flags",
+        "ino",
+        "name",
+        "state"
+      ],
+      "count": 130403928
+    }
+  ],
+  "writeback_dirty_inode_start": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "flags",
+        "ino",
+        "name",
+        "state"
+      ],
+      "count": 71645634
+    }
+  ],
+  "block_touch_buffer": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "dev",
+        "sector",
+        "size"
+      ],
+      "count": 92171303
+    }
+  ],
+  "writeback_dirty_inode": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "flags",
+        "ino",
+        "name",
+        "state"
+      ],
+      "count": 71645632
+    }
+  ],
+  "block_dirty_buffer": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "dev",
+        "sector",
+        "size"
+      ],
+      "count": 76733880
+    }
+  ],
+  "writeback_dirty_page": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "index",
+        "ino",
+        "name"
+      ],
+      "count": 58758296
+    }
+  ],
+  "kmem_mm_page_free": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "order",
+        "page",
+        "pfn"
+      ],
+      "count": 220131725
+    }
+  ],
+  "syscall_entry_sync_file_range": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "fd",
+        "flags",
+        "nbytes",
+        "offset"
+      ],
+      "count": 1414842
+    }
+  ],
+  "kmem_mm_page_free_batched": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cold",
+        "cpu_id",
+        "page",
+        "pfn"
+      ],
+      "count": 181401407
+    }
+  ],
+  "kmem_kmalloc_node": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "bytes_alloc",
+        "bytes_req",
+        "call_site",
+        "cpu_id",
+        "gfp_flags",
+        "node",
+        "ptr"
+      ],
+      "count": 35833
+    }
+  ],
+  "block_bio_remap": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "dev",
+        "nr_sector",
+        "old_dev",
+        "old_sector",
+        "rwbs",
+        "sector"
+      ],
+      "count": 1747431
+    }
+  ],
+  "block_bio_queue": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "comm",
+        "cpu_id",
+        "dev",
+        "nr_sector",
+        "rwbs",
+        "sector",
+        "tid"
+      ],
+      "count": 1748524
+    }
+  ],
+  "block_getrq": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "comm",
+        "cpu_id",
+        "dev",
+        "nr_sector",
+        "rwbs",
+        "sector",
+        "tid"
+      ],
+      "count": 894664
+    }
+  ],
+  "block_plug": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "comm",
+        "cpu_id",
+        "tid"
+      ],
+      "count": 747248
+    }
+  ],
+  "block_rq_insert": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "_cmd_length",
+        "bytes",
+        "cmd",
+        "comm",
+        "cpu_id",
+        "dev",
+        "nr_sector",
+        "rwbs",
+        "sector",
+        "tid"
+      ],
+      "count": 1357172
+    }
+  ],
+  "block_unplug": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "comm",
+        "cpu_id",
+        "nr_rq",
+        "tid"
+      ],
+      "count": 747438
+    }
+  ],
+  "block_rq_issue": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "_cmd_length",
+        "bytes",
+        "cmd",
+        "comm",
+        "cpu_id",
+        "dev",
+        "nr_sector",
+        "rwbs",
+        "sector",
+        "tid"
+      ],
+      "count": 1361244
+    }
+  ],
+  "timer_init": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "timer"
+      ],
+      "count": 1235307
+    }
+  ],
+  "timer_start": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "expires",
+        "flags",
+        "function",
+        "now",
+        "timer"
+      ],
+      "count": 3693521
+    }
+  ],
+  "scsi_dispatch_cmd_start": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "_cmnd_length",
+        "channel",
+        "cmd_len",
+        "cmnd",
+        "cpu_id",
+        "data_sglen",
+        "host_no",
+        "id",
+        "lun",
+        "opcode",
+        "prot_op",
+        "prot_sglen"
+      ],
+      "count": 901366
+    }
+  ],
+  "syscall_exit_sync_file_range": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 1414794
+    }
+  ],
+  "sched_stat_runtime": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "comm",
+        "cpu_id",
+        "runtime",
+        "tid",
+        "vruntime"
+      ],
+      "count": 14227649
+    }
+  ],
+  "irq_handler_entry": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "irq",
+        "name"
+      ],
+      "count": 1017425
+    }
+  ],
+  "scsi_dispatch_cmd_done": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "_cmnd_length",
+        "channel",
+        "cmd_len",
+        "cmnd",
+        "cpu_id",
+        "data_sglen",
+        "host_no",
+        "id",
+        "lun",
+        "opcode",
+        "prot_op",
+        "prot_sglen",
+        "result"
+      ],
+      "count": 897497
+    }
+  ],
+  "irq_softirq_raise": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "vec"
+      ],
+      "count": 10506916
+    }
+  ],
+  "irq_handler_exit": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "irq",
+        "ret"
+      ],
+      "count": 1017425
+    }
+  ],
+  "random_mix_pool_bytes_nolock": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "IP",
+        "bytes",
+        "cpu_id",
+        "pool_name"
+      ],
+      "count": 124398
+    }
+  ],
+  "random_credit_entropy_bits": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "IP",
+        "bits",
+        "cpu_id",
+        "entropy_count",
+        "entropy_total",
+        "pool_name"
+      ],
+      "count": 53910
+    }
+  ],
+  "irq_softirq_entry": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "vec"
+      ],
+      "count": 10506569
+    }
+  ],
+  "block_rq_complete": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "_cmd_length",
+        "cmd",
+        "cpu_id",
+        "dev",
+        "errors",
+        "nr_sector",
+        "rwbs",
+        "sector"
+      ],
+      "count": 902089
+    }
+  ],
+  "random_mix_pool_bytes": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "IP",
+        "bytes",
+        "cpu_id",
+        "pool_name"
+      ],
+      "count": 738067
+    }
+  ],
+  "workqueue_queue_work": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "function",
+        "req_cpu",
+        "work"
+      ],
+      "count": 293659
+    }
+  ],
+  "workqueue_activate_work": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "work"
+      ],
+      "count": 293659
+    }
+  ],
+  "irq_softirq_exit": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "vec"
+      ],
+      "count": 10506563
+    }
+  ],
+  "workqueue_execute_start": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "function",
+        "work"
+      ],
+      "count": 298246
+    }
+  ],
+  "workqueue_execute_end": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "work"
+      ],
+      "count": 298245
+    }
+  ],
+  "syscall_entry_fadvise64": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "advice",
+        "cpu_id",
+        "fd",
+        "len",
+        "offset"
+      ],
+      "count": 32611
+    }
+  ],
+  "syscall_exit_fadvise64": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 32608
+    }
+  ],
+  "kmem_mm_page_alloc_zone_locked": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "migratetype",
+        "order",
+        "page",
+        "pfn"
+      ],
+      "count": 194412117
+    }
+  ],
+  "kmem_mm_page_pcpu_drain": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "migratetype",
+        "order",
+        "page",
+        "pfn"
+      ],
+      "count": 194519575
+    }
+  ],
+  "x86_irq_vectors_reschedule_entry": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "vector"
+      ],
+      "count": 203279
+    }
+  ],
+  "x86_irq_vectors_reschedule_exit": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "vector"
+      ],
+      "count": 203279
+    }
+  ],
+  "x86_irq_vectors_local_timer_entry": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "vector"
+      ],
+      "count": 7663126
+    }
+  ],
+  "timer_hrtimer_cancel": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "hrtimer"
+      ],
+      "count": 14574631
+    }
+  ],
+  "timer_hrtimer_expire_entry": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "function",
+        "hrtimer",
+        "now"
+      ],
+      "count": 7658719
+    }
+  ],
+  "timer_hrtimer_expire_exit": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "hrtimer"
+      ],
+      "count": 7658719
+    }
+  ],
+  "timer_hrtimer_start": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "expires",
+        "function",
+        "hrtimer",
+        "softexpires"
+      ],
+      "count": 14574616
+    }
+  ],
+  "x86_irq_vectors_local_timer_exit": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "vector"
+      ],
+      "count": 7663126
+    }
+  ],
+  "timer_cancel": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "timer"
+      ],
+      "count": 3694041
+    }
+  ],
+  "timer_expire_entry": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "function",
+        "now",
+        "timer"
+      ],
+      "count": 3675438
+    }
+  ],
+  "timer_expire_exit": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "timer"
+      ],
+      "count": 3675438
+    }
+  ],
+  "power_cpu_frequency": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "state"
+      ],
+      "count": 302796
+    }
+  ],
+  "lttng_statedump_start": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id"
+      ],
+      "count": 288
+    }
+  ],
+  "lttng_statedump_process_state": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "mode",
+        "name",
+        "ns_inum",
+        "ns_level",
+        "pid",
+        "ppid",
+        "status",
+        "submode",
+        "tid",
+        "type",
+        "vpid",
+        "vppid",
+        "vtid"
+      ],
+      "count": 49580
+    }
+  ],
+  "lttng_statedump_file_descriptor": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "fd",
+        "filename",
+        "flags",
+        "fmode",
+        "pid"
+      ],
+      "count": 173333
+    }
+  ],
+  "lttng_statedump_interrupt": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "action",
+        "cpu_id",
+        "irq",
+        "name"
+      ],
+      "count": 5184
+    }
+  ],
+  "lttng_statedump_network_interface": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "address_ipv4",
+        "cpu_id",
+        "name"
+      ],
+      "count": 576
+    }
+  ],
+  "sched_migrate_task": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "comm",
+        "cpu_id",
+        "dest_cpu",
+        "orig_cpu",
+        "prio",
+        "tid"
+      ],
+      "count": 280291
+    }
+  ],
+  "lttng_statedump_block_device": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "dev",
+        "diskname"
+      ],
+      "count": 2016
+    }
+  ],
+  "syscall_entry_epoll_wait": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "epfd",
+        "maxevents",
+        "timeout"
+      ],
+      "count": 85237
+    }
+  ],
+  "lttng_statedump_end": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id"
+      ],
+      "count": 288
+    }
+  ],
+  "sched_process_free": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "comm",
+        "cpu_id",
+        "prio",
+        "tid"
+      ],
+      "count": 40511
+    }
+  ],
+  "syscall_entry_sendmsg": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "fd",
+        "flags",
+        "msg"
+      ],
+      "count": 18531
+    }
+  ],
+  "syscall_exit_sendmsg": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 18531
+    }
+  ],
+  "syscall_entry_close": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "fd"
+      ],
+      "count": 4781250
+    }
+  ],
+  "syscall_exit_close": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 4781250
+    }
+  ],
+  "skb_copy_datagram_iovec": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "len",
+        "skbaddr"
+      ],
+      "count": 47551
+    }
+  ],
+  "skb_consume": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "skbaddr"
+      ],
+      "count": 85644
+    }
+  ],
+  "syscall_exit_recvmsg": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "msg",
+        "ret"
+      ],
+      "count": 53270
+    }
+  ],
+  "syscall_entry_shutdown": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "fd",
+        "how"
+      ],
+      "count": 578
+    }
+  ],
+  "syscall_exit_shutdown": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 578
+    }
+  ],
+  "syscall_entry_newfstat": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "fd"
+      ],
+      "count": 1802554
+    }
+  ],
+  "syscall_exit_newfstat": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret",
+        "statbuf"
+      ],
+      "count": 1802554
+    }
+  ],
+  "syscall_entry_mmap": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "addr",
+        "cpu_id",
+        "fd",
+        "flags",
+        "len",
+        "offset",
+        "prot"
+      ],
+      "count": 1081635
+    }
+  ],
+  "syscall_exit_mmap": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 1081635
+    }
+  ],
+  "x86_exceptions_page_fault_user": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "address",
+        "cpu_id",
+        "error_code",
+        "ip"
+      ],
+      "count": 132675235
+    }
+  ],
+  "syscall_entry_write": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "buf",
+        "count",
+        "cpu_id",
+        "fd"
+      ],
+      "count": 210398739
+    }
+  ],
+  "syscall_exit_write": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 210398736
+    }
+  ],
+  "syscall_entry_exit_group": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "error_code"
+      ],
+      "count": 41254
+    }
+  ],
+  "sched_process_exit": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "comm",
+        "cpu_id",
+        "prio",
+        "tid"
+      ],
+      "count": 42547
+    }
+  ],
+  "signal_generate": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "code",
+        "comm",
+        "cpu_id",
+        "errno",
+        "group",
+        "pid",
+        "result",
+        "sig"
+      ],
+      "count": 41557
+    }
+  ],
+  "syscall_exit_wait4": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret",
+        "ru",
+        "stat_addr"
+      ],
+      "count": 38989
+    }
+  ],
+  "syscall_entry_rt_sigaction": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "act",
+        "cpu_id",
+        "sig",
+        "sigsetsize"
+      ],
+      "count": 425373
+    }
+  ],
+  "syscall_exit_rt_sigaction": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "oact",
+        "ret"
+      ],
+      "count": 425373
+    }
+  ],
+  "syscall_entry_rt_sigprocmask": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "how",
+        "nset",
+        "sigsetsize"
+      ],
+      "count": 26169
+    }
+  ],
+  "syscall_exit_rt_sigprocmask": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "oset",
+        "ret"
+      ],
+      "count": 26169
+    }
+  ],
+  "signal_deliver": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "code",
+        "cpu_id",
+        "errno",
+        "sa_flags",
+        "sa_handler",
+        "sig"
+      ],
+      "count": 21209
+    }
+  ],
+  "syscall_entry_wait4": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "options",
+        "upid"
+      ],
+      "count": 38989
+    }
+  ],
+  "sched_process_wait": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "comm",
+        "cpu_id",
+        "prio",
+        "tid"
+      ],
+      "count": 42288
+    }
+  ],
+  "syscall_entry_unknown": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "args",
+        "cpu_id",
+        "id"
+      ],
+      "count": 62068
+    }
+  ],
+  "compat_syscall_exit_unknown": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "args",
+        "cpu_id",
+        "id",
+        "ret"
+      ],
+      "count": 23354
+    }
+  ],
+  "syscall_entry_read": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "count",
+        "cpu_id",
+        "fd"
+      ],
+      "count": 52648202
+    }
+  ],
+  "syscall_exit_read": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "buf",
+        "cpu_id",
+        "ret"
+      ],
+      "count": 52648209
+    }
+  ],
+  "syscall_entry_lseek": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "fd",
+        "offset",
+        "whence"
+      ],
+      "count": 64886
+    }
+  ],
+  "syscall_exit_lseek": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 64886
+    }
+  ],
+  "syscall_entry_clone": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "child_tid",
+        "clone_flags",
+        "cpu_id",
+        "newsp",
+        "parent_tid"
+      ],
+      "count": 39363
+    }
+  ],
+  "timer_hrtimer_init": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "clockid",
+        "cpu_id",
+        "hrtimer",
+        "mode"
+      ],
+      "count": 200203
+    }
+  ],
+  "sched_process_fork": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "_vtids_length",
+        "child_comm",
+        "child_ns_inum",
+        "child_pid",
+        "child_tid",
+        "cpu_id",
+        "parent_comm",
+        "parent_ns_inum",
+        "parent_pid",
+        "parent_tid",
+        "vtids"
+      ],
+      "count": 42511
+    }
+  ],
+  "sched_wakeup_new": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "comm",
+        "cpu_id",
+        "prio",
+        "target_cpu",
+        "tid"
+      ],
+      "count": 42511
+    }
+  ],
+  "syscall_exit_clone": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 78726
+    }
+  ],
+  "x86_exceptions_page_fault_kernel": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "address",
+        "cpu_id",
+        "error_code",
+        "ip"
+      ],
+      "count": 1371918
+    }
+  ],
+  "syscall_entry_execve": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "argv",
+        "cpu_id",
+        "envp",
+        "filename"
+      ],
+      "count": 38199
+    }
+  ],
+  "random_get_random_bytes": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "IP",
+        "cpu_id",
+        "nbytes"
+      ],
+      "count": 41176
+    }
+  ],
+  "random_extract_entropy": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "IP",
+        "cpu_id",
+        "entropy_count",
+        "nbytes",
+        "pool_name"
+      ],
+      "count": 41778
+    }
+  ],
+  "sched_process_exec": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "filename",
+        "old_tid",
+        "tid"
+      ],
+      "count": 40920
+    }
+  ],
+  "syscall_exit_execve": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 38199
+    }
+  ],
+  "syscall_entry_brk": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "brk",
+        "cpu_id"
+      ],
+      "count": 210699
+    }
+  ],
+  "syscall_exit_brk": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 210699
+    }
+  ],
+  "syscall_entry_access": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "filename",
+        "mode"
+      ],
+      "count": 392130
+    }
+  ],
+  "syscall_exit_access": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 392130
+    }
+  ],
+  "syscall_entry_open": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "filename",
+        "flags",
+        "mode"
+      ],
+      "count": 3531477
+    }
+  ],
+  "syscall_exit_open": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 3531477
+    }
+  ],
+  "syscall_entry_mprotect": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "len",
+        "prot",
+        "start"
+      ],
+      "count": 541070
+    }
+  ],
+  "syscall_exit_mprotect": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 541070
+    }
+  ],
+  "syscall_exit_unknown": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "args",
+        "cpu_id",
+        "id",
+        "ret"
+      ],
+      "count": 41836
+    }
+  ],
+  "syscall_entry_munmap": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "addr",
+        "cpu_id",
+        "len"
+      ],
+      "count": 233581
+    }
+  ],
+  "syscall_exit_munmap": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 233581
+    }
+  ],
+  "syscall_entry_getpid": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id"
+      ],
+      "count": 19059
+    }
+  ],
+  "syscall_exit_getpid": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 19059
+    }
+  ],
+  "syscall_entry_geteuid": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id"
+      ],
+      "count": 33121
+    }
+  ],
+  "syscall_exit_geteuid": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 33121
+    }
+  ],
+  "syscall_entry_getppid": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id"
+      ],
+      "count": 18995
+    }
+  ],
+  "syscall_exit_getppid": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 18995
+    }
+  ],
+  "syscall_entry_newstat": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "filename"
+      ],
+      "count": 1816997
+    },
+    {
+      "signature_id": 1,
+      "fields": [
+        "cpu_id",
+        "filename",
+        "version"
+      ],
+      "count": 96
+    },
+    {
+      "signature_id": 2,
+      "fields": [
+        "32",
+        "abi",
+        "awt",
+        "build",
+        "checking",
+        "clocale",
+        "cpu_id",
+        "directory",
+        "filename",
+        "host",
+        "languages",
+        "list",
+        "target",
+        "threads",
+        "time",
+        "tune",
+        "version"
+      ],
+      "count": 64
+    },
+    {
+      "signature_id": 3,
+      "fields": [
+        "32",
+        "abi",
+        "awt",
+        "build",
+        "checking",
+        "clocale",
+        "cpu_id",
+        "directory",
+        "filename",
+        "host",
+        "languages",
+        "list",
+        "std",
+        "target",
+        "threads",
+        "time",
+        "tune",
+        "version"
+      ],
+      "count": 32
+    },
+    {
+      "signature_id": 4,
+      "fields": [
+        "32",
+        "abi",
+        "awt",
+        "build",
+        "checking",
+        "clocale",
+        "cpu_id",
+        "data",
+        "directory",
+        "errors",
+        "filename",
+        "host",
+        "languages",
+        "list",
+        "target",
+        "threads",
+        "time",
+        "tune",
+        "version"
+      ],
+      "count": 32
+    },
+    {
+      "signature_id": 5,
+      "fields": [
+        "32",
+        "abi",
+        "awt",
+        "build",
+        "checking",
+        "clocale",
+        "cpu_id",
+        "directory",
+        "filename",
+        "host",
+        "languages",
+        "list",
+        "march",
+        "target",
+        "threads",
+        "time",
+        "tune",
+        "version"
+      ],
+      "count": 32
+    },
+    {
+      "signature_id": 6,
+      "fields": [
+        "cpu_id",
+        "data",
+        "errors",
+        "filename",
+        "version"
+      ],
+      "count": 32
+    }
+  ],
+  "syscall_exit_newstat": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret",
+        "statbuf"
+      ],
+      "count": 1817285
+    }
+  ],
+  "syscall_entry_fcntl": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "arg",
+        "cmd",
+        "cpu_id",
+        "fd"
+      ],
+      "count": 620782
+    }
+  ],
+  "syscall_exit_fcntl": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "arg",
+        "cpu_id",
+        "ret"
+      ],
+      "count": 620782
+    }
+  ],
+  "syscall_entry_pipe": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id"
+      ],
+      "count": 4692
+    }
+  ],
+  "syscall_exit_pipe": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "fildes",
+        "ret"
+      ],
+      "count": 4692
+    }
+  ],
+  "syscall_entry_dup2": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "newfd",
+        "oldfd"
+      ],
+      "count": 56717
+    }
+  ],
+  "syscall_exit_dup2": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 56717
+    }
+  ],
+  "syscall_entry_chdir": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "filename"
+      ],
+      "count": 3270
+    }
+  ],
+  "syscall_exit_chdir": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 3270
+    }
+  ],
+  "syscall_entry_getdents": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "count",
+        "cpu_id",
+        "fd"
+      ],
+      "count": 325562
+    }
+  ],
+  "syscall_exit_getdents": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "dirent",
+        "ret"
+      ],
+      "count": 325562
+    }
+  ],
+  "syscall_entry_faccessat": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "dfd",
+        "filename",
+        "mode"
+      ],
+      "count": 329
+    }
+  ],
+  "syscall_exit_faccessat": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 329
+    }
+  ],
+  "random_extract_entropy_user": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "IP",
+        "cpu_id",
+        "entropy_count",
+        "nbytes",
+        "pool_name"
+      ],
+      "count": 1190
+    }
+  ],
+  "syscall_entry_getuid": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id"
+      ],
+      "count": 3992
+    }
+  ],
+  "syscall_exit_getuid": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 3992
+    }
+  ],
+  "syscall_entry_getgid": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id"
+      ],
+      "count": 2504
+    }
+  ],
+  "syscall_exit_getgid": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 2504
+    }
+  ],
+  "syscall_entry_mkdir": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "mode",
+        "pathname"
+      ],
+      "count": 770
+    }
+  ],
+  "syscall_exit_mkdir": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 770
+    }
+  ],
+  "syscall_entry_set_tid_address": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "tidptr"
+      ],
+      "count": 15897
+    }
+  ],
+  "syscall_exit_set_tid_address": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 15897
+    }
+  ],
+  "syscall_entry_set_robust_list": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "head",
+        "len"
+      ],
+      "count": 34680
+    }
+  ],
+  "syscall_exit_set_robust_list": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 34680
+    }
+  ],
+  "syscall_entry_getrlimit": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "resource"
+      ],
+      "count": 18089
+    }
+  ],
+  "syscall_exit_getrlimit": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret",
+        "rlim"
+      ],
+      "count": 18089
+    }
+  ],
+  "syscall_entry_getcwd": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "size"
+      ],
+      "count": 3731
+    }
+  ],
+  "syscall_exit_getcwd": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "buf",
+        "cpu_id",
+        "ret"
+      ],
+      "count": 3731
+    }
+  ],
+  "syscall_entry_newlstat": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "filename"
+      ],
+      "count": 141213
+    }
+  ],
+  "syscall_exit_newlstat": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret",
+        "statbuf"
+      ],
+      "count": 141213
+    }
+  ],
+  "syscall_entry_futex": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "op",
+        "uaddr",
+        "uaddr2",
+        "utime",
+        "val",
+        "val3"
+      ],
+      "count": 3881067
+    }
+  ],
+  "syscall_exit_futex": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret",
+        "uaddr",
+        "uaddr2"
+      ],
+      "count": 3881046
+    }
+  ],
+  "syscall_entry_pipe2": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "flags"
+      ],
+      "count": 16258
+    }
+  ],
+  "syscall_exit_pipe2": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "fildes",
+        "ret"
+      ],
+      "count": 16258
+    }
+  ],
+  "syscall_entry_socket": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "family",
+        "protocol",
+        "type"
+      ],
+      "count": 6327
+    }
+  ],
+  "syscall_exit_socket": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 6327
+    }
+  ],
+  "syscall_entry_connect": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "_v4addr_length",
+        "_v6addr_length",
+        "addrlen",
+        "cpu_id",
+        "dport",
+        "family",
+        "fd",
+        "uservaddr",
+        "v4addr",
+        "v6addr"
+      ],
+      "count": 3964
+    }
+  ],
+  "skb_kfree": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "location",
+        "protocol",
+        "skbaddr"
+      ],
+      "count": 36568
+    }
+  ],
+  "syscall_exit_connect": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 3964
+    }
+  ],
+  "syscall_entry_newuname": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id"
+      ],
+      "count": 5267
+    }
+  ],
+  "syscall_exit_newuname": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "name",
+        "ret"
+      ],
+      "count": 5267
+    }
+  ],
+  "syscall_entry_poll": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "nfds",
+        "timeout_msecs",
+        "ufds"
+      ],
+      "count": 161584
+    }
+  ],
+  "syscall_exit_poll": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret",
+        "ufds"
+      ],
+      "count": 161667
+    }
+  ],
+  "syscall_entry_sendmmsg": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "fd",
+        "flags",
+        "mmsg",
+        "vlen"
+      ],
+      "count": 291
+    }
+  ],
+  "net_dev_queue": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "len",
+        "name",
+        "skbaddr"
+      ],
+      "count": 2411
+    }
+  ],
+  "net_dev_xmit": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "len",
+        "name",
+        "rc",
+        "skbaddr"
+      ],
+      "count": 2411
+    }
+  ],
+  "syscall_exit_sendmmsg": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 291
+    }
+  ],
+  "napi_poll": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "dev_name",
+        "napi"
+      ],
+      "count": 105971
+    }
+  ],
+  "net_if_receive_skb": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "len",
+        "name",
+        "skbaddr"
+      ],
+      "count": 102359
+    }
+  ],
+  "syscall_entry_recvfrom": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "addr_len",
+        "cpu_id",
+        "fd",
+        "flags",
+        "size"
+      ],
+      "count": 3346
+    }
+  ],
+  "syscall_exit_recvfrom": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "addr",
+        "addr_len",
+        "cpu_id",
+        "ret",
+        "ubuf"
+      ],
+      "count": 3346
+    }
+  ],
+  "syscall_entry_getsockopt": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "fd",
+        "level",
+        "optlen",
+        "optname"
+      ],
+      "count": 1343
+    }
+  ],
+  "syscall_exit_getsockopt": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "optlen",
+        "optval",
+        "ret"
+      ],
+      "count": 1343
+    }
+  ],
+  "syscall_entry_sendto": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "addr",
+        "addr_len",
+        "buff",
+        "cpu_id",
+        "fd",
+        "flags",
+        "len"
+      ],
+      "count": 4342
+    }
+  ],
+  "syscall_exit_sendto": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 4342
+    }
+  ],
+  "syscall_entry_inotify_add_watch": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "fd",
+        "mask",
+        "pathname"
+      ],
+      "count": 3809
+    }
+  ],
+  "syscall_exit_inotify_add_watch": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 3809
+    }
+  ],
+  "syscall_entry_recvmsg": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "fd",
+        "flags",
+        "msg"
+      ],
+      "count": 53270
+    }
+  ],
+  "syscall_entry_chmod": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "filename",
+        "mode"
+      ],
+      "count": 2240
+    }
+  ],
+  "syscall_exit_chmod": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 2240
+    }
+  ],
+  "syscall_entry_statfs": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "pathname"
+      ],
+      "count": 25442
+    }
+  ],
+  "syscall_exit_statfs": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "buf",
+        "cpu_id",
+        "ret"
+      ],
+      "count": 25442
+    }
+  ],
+  "syscall_entry_flock": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cmd",
+        "cpu_id",
+        "fd"
+      ],
+      "count": 928
+    }
+  ],
+  "syscall_exit_flock": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 928
+    }
+  ],
+  "writeback_start": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "name"
+      ],
+      "count": 8564
+    }
+  ],
+  "writeback_queue_io": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "moved",
+        "name"
+      ],
+      "count": 8541
+    }
+  ],
+  "writeback_written": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "name"
+      ],
+      "count": 8564
+    }
+  ],
+  "writeback_global_dirty_state": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "background_thresh",
+        "cpu_id",
+        "dirty_limit",
+        "dirty_thresh",
+        "nr_dirtied",
+        "nr_dirty",
+        "nr_unstable",
+        "nr_writeback",
+        "nr_written"
+      ],
+      "count": 65281
+    }
+  ],
+  "printk_console": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "_msg_length",
+        "cpu_id",
+        "msg"
+      ],
+      "count": 65267
+    }
+  ],
+  "writeback_pages_written": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "pages"
+      ],
+      "count": 5884
+    }
+  ],
+  "syscall_entry_clock_gettime": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "which_clock"
+      ],
+      "count": 81056
+    }
+  ],
+  "syscall_exit_clock_gettime": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret",
+        "tp"
+      ],
+      "count": 81055
+    }
+  ],
+  "syscall_entry_timerfd_settime": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "flags",
+        "ufd",
+        "utmr"
+      ],
+      "count": 14777
+    }
+  ],
+  "syscall_exit_timerfd_settime": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "otmr",
+        "ret"
+      ],
+      "count": 14777
+    }
+  ],
+  "syscall_entry_ftruncate": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "fd",
+        "length"
+      ],
+      "count": 7020
+    }
+  ],
+  "syscall_exit_ftruncate": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 7020
+    }
+  ],
+  "x86_irq_vectors_call_function_single_entry": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "vector"
+      ],
+      "count": 6073
+    }
+  ],
+  "x86_irq_vectors_call_function_single_exit": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "vector"
+      ],
+      "count": 6064
+    }
+  ],
+  "syscall_entry_readlink": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "bufsiz",
+        "cpu_id",
+        "path"
+      ],
+      "count": 13982
+    }
+  ],
+  "syscall_exit_readlink": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "buf",
+        "cpu_id",
+        "ret"
+      ],
+      "count": 13982
+    }
+  ],
+  "syscall_entry_setrlimit": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "resource",
+        "rlim"
+      ],
+      "count": 1200
+    }
+  ],
+  "syscall_exit_setrlimit": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 1200
+    }
+  ],
+  "syscall_entry_newfstatat": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "dfd",
+        "filename",
+        "flag"
+      ],
+      "count": 133928
+    }
+  ],
+  "syscall_exit_newfstatat": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret",
+        "statbuf"
+      ],
+      "count": 133928
+    }
+  ],
+  "syscall_entry_getegid": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id"
+      ],
+      "count": 3089
+    }
+  ],
+  "syscall_exit_getegid": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 3089
+    }
+  ],
+  "syscall_entry_getpgrp": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id"
+      ],
+      "count": 288
+    }
+  ],
+  "syscall_exit_getpgrp": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 288
+    }
+  ],
+  "block_rq_requeue": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "_cmd_length",
+        "cmd",
+        "cpu_id",
+        "dev",
+        "errors",
+        "nr_sector",
+        "rwbs",
+        "sector"
+      ],
+      "count": 462508
+    }
+  ],
+  "block_bio_backmerge": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "comm",
+        "cpu_id",
+        "dev",
+        "nr_sector",
+        "rwbs",
+        "sector",
+        "tid"
+      ],
+      "count": 856341
+    }
+  ],
+  "kmem_mm_page_alloc_extfrag": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "alloc_migratetype",
+        "alloc_order",
+        "change_ownership",
+        "cpu_id",
+        "fallback_migratetype",
+        "fallback_order",
+        "page",
+        "pfn"
+      ],
+      "count": 26465
+    }
+  ],
+  "jbd2_start_commit": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "dev",
+        "sync_commit",
+        "transaction"
+      ],
+      "count": 4106
+    }
+  ],
+  "jbd2_commit_locking": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "dev",
+        "sync_commit",
+        "transaction"
+      ],
+      "count": 4106
+    }
+  ],
+  "jbd2_checkpoint_stats": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "chp_time",
+        "cpu_id",
+        "dev",
+        "dropped",
+        "forced_to_close",
+        "tid",
+        "written"
+      ],
+      "count": 3957
+    }
+  ],
+  "jbd2_drop_transaction": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "dev",
+        "sync_commit",
+        "transaction"
+      ],
+      "count": 3997
+    }
+  ],
+  "jbd2_commit_flushing": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "dev",
+        "sync_commit",
+        "transaction"
+      ],
+      "count": 4106
+    }
+  ],
+  "jbd2_commit_logging": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "dev",
+        "sync_commit",
+        "transaction"
+      ],
+      "count": 4106
+    }
+  ],
+  "jbd2_run_stats": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "blocks",
+        "blocks_logged",
+        "cpu_id",
+        "dev",
+        "flushing",
+        "handle_count",
+        "locked",
+        "logging",
+        "running",
+        "tid",
+        "wait"
+      ],
+      "count": 4097
+    }
+  ],
+  "jbd2_end_commit": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "dev",
+        "head",
+        "sync_commit",
+        "transaction"
+      ],
+      "count": 4097
+    }
+  ],
+  "syscall_exit_select": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "exp",
+        "inp",
+        "outp",
+        "ret",
+        "tvp"
+      ],
+      "count": 5172
+    }
+  ],
+  "syscall_entry_select": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "exp",
+        "inp",
+        "n",
+        "outp",
+        "tvp"
+      ],
+      "count": 5171
+    }
+  ],
+  "syscall_entry_setpgid": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "pgid",
+        "pid"
+      ],
+      "count": 3
+    }
+  ],
+  "syscall_exit_setpgid": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 3
+    }
+  ],
+  "syscall_entry_alarm": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "seconds"
+      ],
+      "count": 50
+    }
+  ],
+  "timer_itimer_state": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "expires",
+        "interval_sec",
+        "interval_usec",
+        "value_sec",
+        "value_usec",
+        "which"
+      ],
+      "count": 50
+    }
+  ],
+  "syscall_exit_alarm": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 50
+    }
+  ],
+  "syscall_entry_fstatfs": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "fd"
+      ],
+      "count": 17
+    }
+  ],
+  "syscall_exit_fstatfs": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "buf",
+        "cpu_id",
+        "ret"
+      ],
+      "count": 17
+    }
+  ],
+  "syscall_entry_readlinkat": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "bufsiz",
+        "cpu_id",
+        "dfd",
+        "pathname"
+      ],
+      "count": 37
+    }
+  ],
+  "syscall_exit_readlinkat": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "buf",
+        "cpu_id",
+        "ret"
+      ],
+      "count": 37
+    }
+  ],
+  "syscall_entry_setregid": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "egid",
+        "rgid"
+      ],
+      "count": 2
+    }
+  ],
+  "syscall_exit_setregid": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 2
+    }
+  ],
+  "syscall_entry_setresuid": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "euid",
+        "ruid",
+        "suid"
+      ],
+      "count": 1
+    }
+  ],
+  "syscall_exit_setresuid": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 1
+    }
+  ],
+  "syscall_entry_keyctl": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "arg2",
+        "arg3",
+        "arg4",
+        "arg5",
+        "cpu_id",
+        "option"
+      ],
+      "count": 1
+    }
+  ],
+  "syscall_exit_keyctl": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "arg2",
+        "arg3",
+        "arg4",
+        "arg5",
+        "cpu_id",
+        "ret"
+      ],
+      "count": 1
+    }
+  ],
+  "syscall_entry_setreuid": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "euid",
+        "ruid"
+      ],
+      "count": 1
+    }
+  ],
+  "syscall_exit_setreuid": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 1
+    }
+  ],
+  "syscall_entry_setsockopt": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "fd",
+        "level",
+        "optlen",
+        "optname",
+        "optval"
+      ],
+      "count": 1379
+    }
+  ],
+  "syscall_exit_setsockopt": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 1379
+    }
+  ],
+  "syscall_entry_getsockname": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "fd",
+        "usockaddr_len"
+      ],
+      "count": 302
+    }
+  ],
+  "syscall_exit_getsockname": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret",
+        "usockaddr",
+        "usockaddr_len"
+      ],
+      "count": 302
+    }
+  ],
+  "syscall_entry_accept4": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "fd",
+        "flags",
+        "upeer_addrlen"
+      ],
+      "count": 291
+    }
+  ],
+  "syscall_entry_ppoll": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "nfds",
+        "sigmask",
+        "sigsetsize",
+        "tsp",
+        "ufds"
+      ],
+      "count": 594
+    }
+  ],
+  "syscall_exit_accept4": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret",
+        "upeer_addrlen",
+        "upeer_sockaddr"
+      ],
+      "count": 291
+    }
+  ],
+  "syscall_entry_epoll_ctl": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "epfd",
+        "event",
+        "fd",
+        "op"
+      ],
+      "count": 4705
+    }
+  ],
+  "syscall_exit_epoll_ctl": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 4705
+    }
+  ],
+  "syscall_exit_ppoll": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret",
+        "ufds"
+      ],
+      "count": 594
+    }
+  ],
+  "syscall_entry_bind": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "addrlen",
+        "cpu_id",
+        "fd",
+        "umyaddr"
+      ],
+      "count": 17
+    }
+  ],
+  "syscall_exit_bind": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 17
+    }
+  ],
+  "syscall_entry_unlink": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "pathname"
+      ],
+      "count": 3595
+    }
+  ],
+  "syscall_exit_unlink": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 3595
+    }
+  ],
+  "syscall_entry_waitid": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "options",
+        "upid",
+        "which"
+      ],
+      "count": 195
+    }
+  ],
+  "syscall_exit_waitid": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "infop",
+        "ret",
+        "ru"
+      ],
+      "count": 195
+    }
+  ],
+  "syscall_entry_kill": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "pid",
+        "sig"
+      ],
+      "count": 1
+    }
+  ],
+  "syscall_exit_kill": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 1
+    }
+  ],
+  "syscall_entry_rmdir": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "pathname"
+      ],
+      "count": 168
+    }
+  ],
+  "syscall_exit_rmdir": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 168
+    }
+  ],
+  "syscall_entry_umask": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "mask"
+      ],
+      "count": 83
+    }
+  ],
+  "syscall_exit_umask": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 83
+    }
+  ],
+  "syscall_entry_fchmod": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "fd",
+        "mode"
+      ],
+      "count": 3
+    }
+  ],
+  "syscall_exit_fchmod": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 3
+    }
+  ],
+  "syscall_entry_rename": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "newname",
+        "oldname"
+      ],
+      "count": 5
+    }
+  ],
+  "syscall_exit_rename": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 5
+    }
+  ],
+  "scsi_dispatch_cmd_error": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "_cmnd_length",
+        "channel",
+        "cmd_len",
+        "cmnd",
+        "cpu_id",
+        "data_sglen",
+        "host_no",
+        "id",
+        "lun",
+        "opcode",
+        "prot_op",
+        "prot_sglen",
+        "rtn"
+      ],
+      "count": 2630
+    }
+  ],
+  "jbd2_write_superblock": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "dev",
+        "write_op"
+      ],
+      "count": 15
+    }
+  ],
+  "jbd2_update_log_tail": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "block_nr",
+        "cpu_id",
+        "dev",
+        "first_tid",
+        "freed",
+        "tail_sequence"
+      ],
+      "count": 15
+    }
+  ],
+  "sched_wait_task": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "comm",
+        "cpu_id",
+        "prio",
+        "tid"
+      ],
+      "count": 43
+    }
+  ],
+  "syscall_exit_nanosleep": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret",
+        "rmtp"
+      ],
+      "count": 66498
+    }
+  ],
+  "syscall_entry_nanosleep": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "rqtp"
+      ],
+      "count": 66498
+    }
+  ],
+  "writeback_wbc_writepage": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "for_background",
+        "for_kupdate",
+        "for_reclaim",
+        "name",
+        "nr_to_write",
+        "pages_skipped",
+        "range_cyclic",
+        "range_end",
+        "range_start",
+        "sync_mode"
+      ],
+      "count": 21014
+    }
+  ],
+  "writeback_single_inode": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "dirtied_when",
+        "ino",
+        "name",
+        "nr_to_write",
+        "state",
+        "writeback_index",
+        "wrote"
+      ],
+      "count": 64396
+    }
+  ],
+  "writeback_write_inode_start": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ino",
+        "name",
+        "sync_mode"
+      ],
+      "count": 63355
+    }
+  ],
+  "writeback_write_inode": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ino",
+        "name",
+        "sync_mode"
+      ],
+      "count": 63355
+    }
+  ],
+  "block_bio_frontmerge": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "comm",
+        "cpu_id",
+        "dev",
+        "nr_sector",
+        "rwbs",
+        "sector",
+        "tid"
+      ],
+      "count": 4934
+    }
+  ],
+  "x86_irq_vectors_irq_work_entry": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "vector"
+      ],
+      "count": 2882
+    }
+  ],
+  "x86_irq_vectors_irq_work_exit": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "vector"
+      ],
+      "count": 2882
+    }
+  ],
+  "block_sleeprq": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "comm",
+        "cpu_id",
+        "dev",
+        "nr_sector",
+        "rwbs",
+        "sector",
+        "tid"
+      ],
+      "count": 2941
+    }
+  ],
+  "syscall_entry_unlinkat": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "dfd",
+        "flag",
+        "pathname"
+      ],
+      "count": 1035744
+    }
+  ],
+  "syscall_exit_unlinkat": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 1035744
+    }
+  ],
+  "syscall_entry_pread64": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "count",
+        "cpu_id",
+        "fd",
+        "pos"
+      ],
+      "count": 6950
+    }
+  ],
+  "syscall_exit_pread64": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "buf",
+        "cpu_id",
+        "ret"
+      ],
+      "count": 6950
+    }
+  ],
+  "syscall_entry_gettid": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id"
+      ],
+      "count": 288
+    }
+  ],
+  "syscall_exit_gettid": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 288
+    }
+  ],
+  "syscall_entry_openat": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "dfd",
+        "filename",
+        "flags",
+        "mode"
+      ],
+      "count": 1136556
+    }
+  ],
+  "syscall_exit_openat": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 1136556
+    }
+  ],
+  "syscall_entry_eventfd2": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "count",
+        "cpu_id",
+        "flags"
+      ],
+      "count": 2592
+    }
+  ],
+  "syscall_exit_eventfd2": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 2592
+    }
+  ],
+  "syscall_entry_prctl": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "arg2",
+        "arg3",
+        "arg4",
+        "arg5",
+        "cpu_id",
+        "option"
+      ],
+      "count": 577
+    }
+  ],
+  "syscall_exit_prctl": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "arg2",
+        "cpu_id",
+        "ret"
+      ],
+      "count": 577
+    }
+  ],
+  "syscall_entry_getgroups": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "gidsetsize"
+      ],
+      "count": 584
+    }
+  ],
+  "syscall_exit_getgroups": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "grouplist",
+        "ret"
+      ],
+      "count": 584
+    }
+  ],
+  "syscall_entry_accept": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "_v4addr_length",
+        "_v6addr_length",
+        "cpu_id",
+        "fd",
+        "upeer_addrlen",
+        "upeer_sockaddr",
+        "v4addr",
+        "v6addr"
+      ],
+      "count": 576
+    }
+  ],
+  "syscall_exit_accept": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "family",
+        "ret",
+        "sport",
+        "upeer_addrlen"
+      ],
+      "count": 576
+    }
+  ],
+  "syscall_entry_fallocate": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "fd",
+        "len",
+        "mode",
+        "offset"
+      ],
+      "count": 4
+    }
+  ],
+  "syscall_exit_fallocate": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 4
+    }
+  ],
+  "module_request": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ip",
+        "name",
+        "wait"
+      ],
+      "count": 3104
+    }
+  ],
+  "syscall_entry_setsid": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id"
+      ],
+      "count": 12
+    }
+  ],
+  "syscall_exit_setsid": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 12
+    }
+  ],
+  "syscall_entry_fsetxattr": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "fd",
+        "flags",
+        "name",
+        "size",
+        "value"
+      ],
+      "count": 1
+    }
+  ],
+  "syscall_exit_fsetxattr": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 1
+    }
+  ],
+  "syscall_entry_pwrite64": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "buf",
+        "count",
+        "cpu_id",
+        "fd",
+        "pos"
+      ],
+      "count": 1
+    }
+  ],
+  "syscall_exit_pwrite64": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 1
+    }
+  ],
+  "syscall_entry_fsync": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "fd"
+      ],
+      "count": 578
+    }
+  ],
+  "syscall_exit_fsync": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 578
+    }
+  ],
+  "syscall_entry_getxattr": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "name",
+        "pathname",
+        "size"
+      ],
+      "count": 6
+    }
+  ],
+  "syscall_exit_getxattr": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret",
+        "value"
+      ],
+      "count": 6
+    }
+  ],
+  "timer_itimer_expire": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "now",
+        "pid",
+        "which"
+      ],
+      "count": 8
+    }
+  ],
+  "syscall_entry_getrusage": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "who"
+      ],
+      "count": 72
+    }
+  ],
+  "syscall_exit_getrusage": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret",
+        "ru"
+      ],
+      "count": 72
+    }
+  ],
+  "syscall_entry_setgroups": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "gidsetsize",
+        "grouplist"
+      ],
+      "count": 19
+    }
+  ],
+  "syscall_exit_setgroups": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 19
+    }
+  ],
+  "syscall_entry_setgid": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "gid"
+      ],
+      "count": 27
+    }
+  ],
+  "syscall_exit_setgid": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 27
+    }
+  ],
+  "syscall_entry_setuid": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "uid"
+      ],
+      "count": 19
+    }
+  ],
+  "syscall_exit_setuid": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 19
+    }
+  ],
+  "syscall_entry_symlink": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "newname",
+        "oldname"
+      ],
+      "count": 320
+    }
+  ],
+  "syscall_exit_symlink": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 320
+    }
+  ],
+  "syscall_entry_madvise": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "behavior",
+        "cpu_id",
+        "len_in",
+        "start"
+      ],
+      "count": 544
+    }
+  ],
+  "syscall_exit_madvise": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 544
+    }
+  ],
+  "syscall_entry_exit": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "error_code"
+      ],
+      "count": 544
+    }
+  ],
+  "syscall_entry_sync": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id"
+      ],
+      "count": 128
+    }
+  ],
+  "writeback_queue": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "name"
+      ],
+      "count": 352
+    }
+  ],
+  "writeback_exec": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "name"
+      ],
+      "count": 352
+    }
+  ],
+  "syscall_exit_sync": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 128
+    }
+  ],
+  "syscall_entry_creat": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "mode",
+        "pathname"
+      ],
+      "count": 64
+    }
+  ],
+  "syscall_exit_creat": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 64
+    }
+  ],
+  "syscall_entry_clock_adjtime": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "utx",
+        "which_clock"
+      ],
+      "count": 5
+    }
+  ],
+  "syscall_exit_clock_adjtime": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret",
+        "utx"
+      ],
+      "count": 5
+    }
+  ],
+  "syscall_entry_utimensat": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "dfd",
+        "filename",
+        "flags",
+        "utimes"
+      ],
+      "count": 1035653
+    }
+  ],
+  "syscall_exit_utimensat": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 1035653
+    }
+  ],
+  "syscall_entry_getpriority": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "which",
+        "who"
+      ],
+      "count": 11
+    }
+  ],
+  "syscall_exit_getpriority": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 11
+    }
+  ],
+  "syscall_entry_setpriority": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "niceval",
+        "which",
+        "who"
+      ],
+      "count": 11
+    }
+  ],
+  "syscall_exit_setpriority": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 11
+    }
+  ],
+  "net_if_rx": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "len",
+        "name",
+        "skbaddr"
+      ],
+      "count": 10
+    }
+  ],
+  "syscall_entry_sched_getaffinity": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "len",
+        "pid"
+      ],
+      "count": 48
+    }
+  ],
+  "syscall_exit_sched_getaffinity": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret",
+        "user_mask_ptr"
+      ],
+      "count": 48
+    }
+  ],
+  "syscall_entry_mremap": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "addr",
+        "cpu_id",
+        "flags",
+        "new_addr",
+        "new_len",
+        "old_len"
+      ],
+      "count": 32
+    }
+  ],
+  "syscall_exit_mremap": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 32
+    }
+  ],
+  "syscall_entry_shmget": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "key",
+        "shmflg",
+        "size"
+      ],
+      "count": 192
+    }
+  ],
+  "syscall_exit_shmget": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 192
+    }
+  ],
+  "syscall_entry_shmat": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "shmaddr",
+        "shmflg",
+        "shmid"
+      ],
+      "count": 192
+    }
+  ],
+  "syscall_exit_shmat": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 192
+    }
+  ],
+  "syscall_entry_shmdt": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "shmaddr"
+      ],
+      "count": 64
+    }
+  ],
+  "syscall_exit_shmdt": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 64
+    }
+  ],
+  "mm_vmscan_kswapd_sleep": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "nid"
+      ],
+      "count": 17
+    }
+  ],
+  "mm_vmscan_wakeup_kswapd": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "nid",
+        "order",
+        "zid"
+      ],
+      "count": 196
+    }
+  ],
+  "mm_vmscan_kswapd_wake": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "nid",
+        "order"
+      ],
+      "count": 64
+    }
+  ],
+  "mm_vmscan_lru_isolate": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "file",
+        "isolate_mode",
+        "nr_requested",
+        "nr_scanned",
+        "nr_taken",
+        "order"
+      ],
+      "count": 19182
+    }
+  ],
+  "mm_vmscan_lru_shrink_inactive": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "nid",
+        "nr_reclaimed",
+        "nr_scanned",
+        "priority",
+        "reclaim_flags",
+        "zid"
+      ],
+      "count": 18801
+    }
+  ],
+  "mm_vmscan_direct_reclaim_begin": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "gfp_flags",
+        "may_writepage",
+        "order"
+      ],
+      "count": 325
+    }
+  ],
+  "writeback_wait_iff_congested": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "usec_delayed",
+        "usec_timeout"
+      ],
+      "count": 16054
+    }
+  ],
+  "mm_vmscan_shrink_slab_start": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cache_items",
+        "cpu_id",
+        "delta",
+        "gfp_flags",
+        "lru_pgs",
+        "nr_objects_to_shrink",
+        "pgs_scanned",
+        "shr",
+        "shrink",
+        "total_scan"
+      ],
+      "count": 4759
+    }
+  ],
+  "mm_vmscan_shrink_slab_end": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "new_scan",
+        "nid",
+        "retval",
+        "shr",
+        "shrink",
+        "total_scan",
+        "unused_scan"
+      ],
+      "count": 4759
+    }
+  ],
+  "mm_vmscan_direct_reclaim_end": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "nr_reclaimed"
+      ],
+      "count": 325
+    }
+  ],
+  "syscall_entry_dup": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "fildes"
+      ],
+      "count": 64
+    }
+  ],
+  "syscall_exit_dup": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 64
+    }
+  ],
+  "syscall_entry_mkdirat": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "dfd",
+        "mode",
+        "pathname"
+      ],
+      "count": 60128
+    }
+  ],
+  "syscall_exit_mkdirat": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 60128
+    }
+  ],
+  "syscall_entry_symlinkat": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "newdfd",
+        "newname",
+        "oldname"
+      ],
+      "count": 32
+    }
+  ],
+  "syscall_exit_symlinkat": [
+    {
+      "signature_id": 0,
+      "fields": [
+        "cpu_id",
+        "ret"
+      ],
+      "count": 32
+    }
+  ]
+}

@@ -1,7 +1,6 @@
 .idea
 .venv
-llm_suggested_research_papers
 dataset/parquet_files_dataset
 txt_traces
-
+temp_md_files
 __pycache__/

@@ -51,3 +51,6 @@ python -u -m synthetic_data_processing.repair_synthetic \
   --max_ref 10000
 
 echo "Repair completed."
+
+
+# python -u synthetic_data_processing/repair_synthetic.py --synth_npz "outputs/diffusion_outputs/generated_traces/compress-gzip/synth_100k_step50k.npz" --constraints_json "dataset/constraints.json" --real_glob "dataset/window_shards/compress-gzip/train/*.npz" --output_npz "generated_traces/discrete/compress-gzip/synth_100k_step50k_repaired.npz" --max_ref 10000

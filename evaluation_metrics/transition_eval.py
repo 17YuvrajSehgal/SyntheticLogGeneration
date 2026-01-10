@@ -1,5 +1,13 @@
+# python -u evaluation_metrics/transition_eval.py   --real_glob "dataset/window_shards/compress-gzip/train/*.npz"   --synth outputs/diffusion_outputs/generated_traces/compress-gzip/synth_100k_step50k_repaired.npz   --max_real_shards 50   --num_events 384   --num_dt_buckets 256   --num_cpus 4   --out_dir "evaluation_results/repairedSynth_vs_real"
+
+# python -u evaluation_metrics/transition_eval.py   --real_glob "dataset/window_shards/compress-gzip/train/*.npz"   --synth outputs/diffusion_outputs/generated_traces/compress-gzip/synth_100k_step50k.npz   --max_real_shards 50   --num_events 384   --num_dt_buckets 256   --num_cpus 4   --out_dir "evaluation_results/originalSynth_vs_real"
+
 import argparse, glob
 import numpy as np
+import os
+import json
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 EPS = 1e-12
 
@@ -72,30 +80,92 @@ def iter_real_shards(real_glob, max_shards=None):
     if max_shards is not None:
         paths = paths[:max_shards]
     for p in paths:
-        d = np.load(p)
-        yield p, d["event"], d["dt"], d["cpu"]
-        d.close()
+        with np.load(p) as d:
+            yield p, d["event"], d["dt"], d["cpu"]
 
 def load_synth_npz(path):
-    d = np.load(path)
-    event, dt, cpu = d["event"], d["dt"], d["cpu"]
-    d.close()
-    return event, dt, cpu
+    with np.load(path) as d:
+        return d["event"], d["dt"], d["cpu"]
+
+# --- PLOTTING HELPERS ---
+def plot_transition_heatmap(mat_real, mat_synth, title, out_path, top_k=20):
+    """
+    Plot heatmaps of the top-k most frequent real transitions.
+    """
+    # Simply sum rows to get marginals, then pick top events
+    # Or just use the global marginals if passed.
+    # Let's just use row sums of mat_real
+    row_sums = mat_real.sum(axis=1)
+    top_indices = np.argsort(row_sums)[::-1][:top_k]
+    
+    # Subset matrices
+    sub_real = mat_real[top_indices][:, top_indices]
+    sub_synth = mat_synth[top_indices][:, top_indices]
+    
+    fig, axes = plt.subplots(1, 3, figsize=(18, 5))
+    
+    # Use log scale for heatmaps usually better for long-tailed logs
+    # But these are probabilities? If probabilities, raw is fine. 
+    # If they are counts, log. These are probabilities (normalized).
+    
+    sns.heatmap(sub_real, ax=axes[0], cmap="viridis", cbar=True, vmin=0, vmax=1)
+    axes[0].set_title(f"Real {title} (Top {top_k})")
+    
+    sns.heatmap(sub_synth, ax=axes[1], cmap="viridis", cbar=True, vmin=0, vmax=1)
+    axes[1].set_title(f"Synth {title} (Top {top_k})")
+    
+    diff = np.abs(sub_real - sub_synth)
+    sns.heatmap(diff, ax=axes[2], cmap="Reds", cbar=True, vmin=0, vmax=0.5)
+    axes[2].set_title(f"Difference (L1 Error)")
+    
+    plt.tight_layout()
+    plt.savefig(out_path)
+    plt.close()
+
+def plot_marginal_comparison(p_real, p_synth, curr_name, out_path, top_k=50):
+    """
+    Bar plot of top-k items.
+    """
+    indices = np.argsort(p_real)[::-1][:top_k]
+    
+    vals_real = p_real[indices]
+    vals_synth = p_synth[indices]
+    
+    labels = indices # just IDs
+    x = np.arange(len(labels))
+    width = 0.35
+    
+    fig, ax = plt.subplots(figsize=(15, 6))
+    ax.bar(x - width/2, vals_real, width, label='Real')
+    ax.bar(x + width/2, vals_synth, width, label='Synth')
+    
+    ax.set_ylabel('Probability')
+    ax.set_title(f'{curr_name} Marginal Distribution (Top {top_k})')
+    ax.legend()
+    
+    plt.tight_layout()
+    plt.savefig(out_path)
+    plt.close()
+
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--real_glob", required=True, help='e.g. "window_shards/compress-gzip/train/*.npz"')
     ap.add_argument("--synth", required=True, help="synthetic .npz from sample_synthetic")
     ap.add_argument("--max_real_shards", type=int, default=50, help="how many real shards to aggregate")
-
+    
     ap.add_argument("--num_events", type=int, required=True)
     ap.add_argument("--num_dt_buckets", type=int, default=256)
     ap.add_argument("--num_cpus", type=int, default=4)
-
+    
     ap.add_argument("--topk_events_dt", type=int, default=30, help="top-K events for P(dt|event) analysis")
     ap.add_argument("--min_occ_dt", type=int, default=5000, help="min occurrences to include event in dt|event stats")
+    
+    ap.add_argument("--out_dir", type=str, default="evaluation_results", help="Directory to save plots and json")
 
     args = ap.parse_args()
+    
+    os.makedirs(args.out_dir, exist_ok=True)
 
     E = args.num_events
     D = args.num_dt_buckets
@@ -158,13 +228,28 @@ def main():
     p_sec = safe_normalize(synth_joint_ec.reshape(-1)).reshape(E, C)
 
     # --- Metrics ---
+    results = {}
+    
     print("Real shards used:", used)
     print("Synth windows:", sev.shape[0], "seq_len:", sev.shape[1])
+    
+    results["metrics_kl"] = {
+        "event_marginal": kl_div(p_re, p_se),
+        "dt_marginal": kl_div(p_rd, p_sd),
+        "cpu_marginal": kl_div(p_rc, p_sc)
+    }
 
     print("\n=== Marginal KL (RealAgg || Synth) ===")
-    print("Event KL:", kl_div(p_re, p_se))
-    print("DT KL   :", kl_div(p_rd, p_sd))
-    print("CPU KL  :", kl_div(p_rc, p_sc))
+    print("Event KL:", results["metrics_kl"]["event_marginal"])
+    print("DT KL   :", results["metrics_kl"]["dt_marginal"])
+    print("CPU KL  :", results["metrics_kl"]["cpu_marginal"])
+    
+    # Plot Marginals
+    plot_marginal_comparison(p_re, p_se, "Event", os.path.join(args.out_dir, "event_marginal_top50.png"), top_k=50)
+    plot_marginal_comparison(p_rd, p_sd, "DT", os.path.join(args.out_dir, "dt_marginal_top50.png"), top_k=50)
+    # CPU is small enough to plot all
+    plot_marginal_comparison(p_rc, p_sc, "CPU", os.path.join(args.out_dir, "cpu_marginal.png"), top_k=C)
+
 
     # ---- Event transition metrics ----
     row_kls = np.zeros(E, dtype=np.float64)
@@ -173,30 +258,53 @@ def main():
 
     valid_rows = (real_bigram_e.sum(axis=1) > 0)
     weighted_event_bigram_kl = float(np.sum(p_re[valid_rows] * row_kls[valid_rows]))
+    
+    results["transition_event"] = {
+        "weighted_row_kl": weighted_event_bigram_kl,
+        "l1_distance": l1_dist(P_re, P_se),
+        "frobenius_norm": frob_norm(P_re, P_se),
+        "cosine_sim": cosine_sim(P_re, P_se)
+    }
 
     print("\n=== Event Transition Matrix: P(e_{t+1} | e_t) ===")
     print("Weighted row KL (real-supported rows only):", weighted_event_bigram_kl)
-    print("L1 distance     :", l1_dist(P_re, P_se))
-    print("Frobenius norm   :", frob_norm(P_re, P_se))
-    print("Cosine similarity:", cosine_sim(P_re, P_se))
+    print("L1 distance     :", results["transition_event"]["l1_distance"])
+    print("Frobenius norm   :", results["transition_event"]["frobenius_norm"])
+    print("Cosine similarity:", results["transition_event"]["cosine_sim"])
+    
+    # Plot Heatmap
+    plot_transition_heatmap(P_re, P_se, "Event Transition", os.path.join(args.out_dir, "event_transition_heatmap.png"), top_k=20)
 
     # ---- CPU transition metrics ----
     cpu_row_kls = np.zeros(C, dtype=np.float64)
     for c in range(C):
         cpu_row_kls[c] = kl_div(P_rc[c], P_sc[c])
     weighted_cpu_bigram_kl = float(np.sum(p_rc * cpu_row_kls))
+    
+    results["transition_cpu"] = {
+        "weighted_row_kl": weighted_cpu_bigram_kl,
+        "l1_distance": l1_dist(P_rc, P_sc),
+        "frobenius_norm": frob_norm(P_rc, P_sc),
+        "cosine_sim": cosine_sim(P_rc, P_sc)
+    }
 
     print("\n=== CPU Transition Matrix: P(c_{t+1} | c_t) ===")
     print("Weighted row KL:", weighted_cpu_bigram_kl)
-    print("L1 distance     :", l1_dist(P_rc, P_sc))
-    print("Frobenius norm  :", frob_norm(P_rc, P_sc))
-    print("Cosine similarity:", cosine_sim(P_rc, P_sc))
+    print("L1 distance     :", results["transition_cpu"]["l1_distance"])
+    print("Frobenius norm  :", results["transition_cpu"]["frobenius_norm"])
+    print("Cosine similarity:", results["transition_cpu"]["cosine_sim"])
 
     # ---- Joint metrics ----
+    results["joint_event_cpu"] = {
+        "kl": kl_div(p_rec, p_sec),
+        "l1_distance": l1_dist(p_rec, p_sec),
+        "cosine_sim": cosine_sim(p_rec, p_sec)
+    }
+    
     print("\n=== Joint Event-CPU: P(event, cpu) ===")
-    print("KL (Real||Synth):", kl_div(p_rec, p_sec))
-    print("L1 distance     :", l1_dist(p_rec, p_sec))
-    print("Cosine similarity:", cosine_sim(p_rec, p_sec))
+    print("KL (Real||Synth):", results["joint_event_cpu"]["kl"])
+    print("L1 distance     :", results["joint_event_cpu"]["l1_distance"])
+    print("Cosine similarity:", results["joint_event_cpu"]["cosine_sim"])
 
     # --- Timing conditioned on event ---
     top = np.argsort(real_marg_e)[::-1]
@@ -238,22 +346,45 @@ def main():
         print("Mean KL(dt|e):", float(kls.mean()))
         print("Median KL(dt|e):", float(np.median(kls)))
         print("\nWorst 10 events by KL(dt|e):")
+        worst_list = []
         for k, e, nr, ns in per_event[:10]:
             print(f"  event={e:3d}  KL={k:.4f}  real_occ={nr}  synth_occ={ns}")
+            worst_list.append({"event": e, "kl": k, "real_occ": nr, "synth_occ": ns})
+        
+        results["dt_conditional"] = {
+            "mean_kl": float(kls.mean()),
+            "median_kl": float(np.median(kls)),
+            "worst_10": worst_list
+        }
     else:
         print("No events met the occurrence threshold; lower --min_occ_dt.")
+        results["dt_conditional"] = {}
 
     # ---- Most mismatched event transition rows (real_count>0 only) ----
     print("\n=== Most mismatched event transition rows (by KL, real_count>0) ===")
     worst = np.argsort(row_kls)[::-1]
     shown = 0
+    worst_rows = []
     for e in worst:
         if real_marg_e[e] == 0:
             continue
         print(f"  event={int(e):3d} row_KL={float(row_kls[e]):.4f}  real_count={int(real_marg_e[e])}  synth_count={int(synth_marg_e[e])}")
+        worst_rows.append({
+            "event": int(e),
+            "row_kl": float(row_kls[e]),
+            "real_count": int(real_marg_e[e]),
+            "synth_count": int(synth_marg_e[e])
+        })
         shown += 1
         if shown >= 10:
             break
+    results["worst_transition_rows"] = worst_rows
+            
+    # Save JSON
+    json_path = os.path.join(args.out_dir, "metrics.json")
+    with open(json_path, 'w') as f:
+        json.dump(results, f, indent=2)
+    print(f"\n[INFO] Saved results to {args.out_dir}")
 
 if __name__ == "__main__":
     main()

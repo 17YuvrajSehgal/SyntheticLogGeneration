@@ -25,13 +25,19 @@ python -c "import numpy; print('NumPy:', numpy.__version__)"
 
 # ---- Transition Evaluation ----
 python -u dataset_processing/transition_eval.py \
-  --real_glob "window_shards/compress-gzip/train/*.npz" \
-  --synth generated_traces/discrete/compress-gzip/synth_2k_step50k_FIXED.npz \
+  --real_glob "dataset/window_shards/compress-gzip/train/*.npz" \
+  --synth generated_traces/discrete/compress-gzip/synth_100k_step50k_repaired.npz \
   --max_real_shards 50 \
-  --num_events 380 \
+  --num_events 384 \
   --num_dt_buckets 256 \
   --num_cpus 4 \
   --topk_events_dt 30 \
   --min_occ_dt 5000
 
 echo "Transition evaluation completed."
+
+#original sample
+# python -u evaluation_metrics/transition_eval.py --real_glob "dataset/window_shards/compress-gzip/train/*.npz" --synth generated_traces/discrete/compress-gzip/synth_100k_step50k_repaired.npz --max_real_shards 50 --num_events 384 --num_dt_buckets 256 --num_cpus 4 --topk_events_dt 30 --min_occ_dt 5000
+
+#repaired sample
+# python -u evaluation_metrics/transition_eval.py --real_glob "dataset/window_shards/compress-gzip/train/*.npz" --synth generated_traces/discrete/compress-gzip/synth_100k_step50k_repaired.npz --max_real_shards 50 --num_events 384 --num_dt_buckets 256 --num_cpus 4 --topk_events_dt 30 --min_occ_dt 5000

@@ -26,7 +26,7 @@ echo "PWD:  $(pwd)"
 # TODO: Update real_glob if using a different benchmark
 
 SYNTH_INPUT="outputs/diffusion_outputs/generated_traces/compress-gzip/synth_100k_step50k.npz"
-SYNTH_OUTPUT="generated_traces/discrete/compress-gzip/synth_100k_step50k_repaired.npz"
+SYNTH_OUTPUT="synth outputs/diffusion_outputs/generated_traces/compress-gzip/synth_100k_step50k_repaired.npz"
 CONSTRAINTS="dataset/constraints.json"
 REAL_GLOB="window_shards/compress-gzip/train/*.npz"
 

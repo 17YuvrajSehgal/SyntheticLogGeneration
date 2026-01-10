@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=extract_schemas
 #SBATCH --account=def-naser2
-#SBATCH --time=04:00:00
+#SBATCH --time=06:00:00
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=32G
 #SBATCH --output=logs/extract_schemas/extract_schemas_%j.out

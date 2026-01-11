@@ -9,6 +9,11 @@
 
 set -euo pipefail
 
+REPO="/project/def-naser2/yuvraj/SyntheticLogGeneration"
+cd "$REPO"
+source "$REPO/.venv/bin/activate"
+export PYTHONUNBUFFERED=1
+
 # Paths
 PROJECT_DIR="/project/def-naser2/yuvraj/SyntheticLogGeneration"
 SCRIPT="$PROJECT_DIR/dataset/txt_to_enriched_parquet.py"

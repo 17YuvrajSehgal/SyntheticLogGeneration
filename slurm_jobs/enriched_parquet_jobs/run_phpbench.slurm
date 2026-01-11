@@ -15,7 +15,13 @@ set -euo pipefail
 module purge
 module load StdEnv/2023
 module load python/3.11
-module load pyarrow/21.0.0
+module load arrow/21.0.0
+
+python - << 'EOF'
+import pyarrow as pa
+print("PyArrow version:", pa.__version__)
+EOF
+
 
 # Paths
 PROJECT_DIR="/project/def-naser2/yuvraj/SyntheticLogGeneration"

@@ -27,7 +27,7 @@ OUT="generated_traces/context_4096_gen.npz"
 # Create output dir if it doesn't exist (though script handles it too)
 mkdir -p generated_traces
 
-python sample_diffusion.py \
+python -u sample_diffusion.py \
   --ckpt "$CKPT" \
   --out "$OUT" \
   --d-model 512 \

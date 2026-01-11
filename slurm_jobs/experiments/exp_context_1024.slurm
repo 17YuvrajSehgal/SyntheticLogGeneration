@@ -39,7 +39,7 @@ python -u train_experiment.py \
     --d-model 512 \
     --nhead 8 \
     --num-layers 8 \
-    --batch-size 256 \
+    --batch-size 128 \
     --epochs 100 \
     --steps 1000 \
     --lr 2e-4 \

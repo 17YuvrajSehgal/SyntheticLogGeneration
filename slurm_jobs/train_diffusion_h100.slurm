@@ -1,3 +1,4 @@
+#!/bin/bash
 #SBATCH --job-name=train_diff_h100
 #SBATCH --account=def-naser2
 #SBATCH --gpus-per-node=h100:1  # Request full H100 (80GB)

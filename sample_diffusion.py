@@ -99,6 +99,7 @@ def main():
         
     # 4. Save
     print(f"[Info] Saving to {args.out}")
+    os.makedirs(os.path.dirname(args.out), exist_ok=True)
     np.savez_compressed(args.out, **final_dict)
     print("[Success] Done.")
 

@@ -9,6 +9,14 @@
 
 set -euo pipefail
 
+# -----------------------------
+# Modules (pyarrow is a module on Nibi)
+# -----------------------------
+module purge
+module load StdEnv/2023
+module load python/3.11
+module load pyarrow/21.0.0
+
 # Paths
 PROJECT_DIR="/project/def-naser2/yuvraj/SyntheticLogGeneration"
 SCRIPT="$PROJECT_DIR/dataset/txt_to_enriched_parquet.py"

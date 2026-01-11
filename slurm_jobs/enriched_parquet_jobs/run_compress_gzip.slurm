@@ -9,10 +9,13 @@
 
 set -euo pipefail
 
-REPO="/project/def-naser2/yuvraj/SyntheticLogGeneration"
-cd "$REPO"
-source "$REPO/.venv/bin/activate"
-export PYTHONUNBUFFERED=1
+# -----------------------------
+# Modules (pyarrow is a module on Nibi)
+# -----------------------------
+module purge
+module load StdEnv/2023
+module load python/3.11
+module load pyarrow/21.0.0
 
 # Paths
 PROJECT_DIR="/project/def-naser2/yuvraj/SyntheticLogGeneration"

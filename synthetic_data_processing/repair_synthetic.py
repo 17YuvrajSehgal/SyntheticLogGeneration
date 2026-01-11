@@ -1,3 +1,9 @@
+#diffusion
+# python -u synthetic_data_processing/repair_synthetic.py --synth_npz "outputs/art_outputs/generated_traces/compress-gzip/synth_100k.npz" --constraints_json "dataset/constraints.json" --real_glob "dataset/window_shards/compress-gzip/train/*.npz" --output_npz "outputs/diffusion_outputs/generated_traces/compress-gzip/synth_100k_step50k_repaired.npz" --max_ref 10000
+
+#ar
+# python -u synthetic_data_processing/repair_synthetic.py --synth_npz "outputs/diffusion_outputs/generated_traces/compress-gzip/synth_100k_step50k.npz" --constraints_json "dataset/constraints.json" --real_glob "dataset/window_shards/compress-gzip/train/*.npz" --output_npz "outputs/ar_outputs/generated_traces/compress-gzip/synth_100k_repaired.npz" --max_ref 10000
+
 import argparse
 import json
 import numpy as np

@@ -1,6 +1,13 @@
-# python -u evaluation_metrics/transition_eval.py   --real_glob "dataset/window_shards/compress-gzip/train/*.npz"   --synth outputs/diffusion_outputs/generated_traces/compress-gzip/synth_100k_step50k_repaired.npz   --max_real_shards 50   --num_events 384   --num_dt_buckets 256   --num_cpus 4   --out_dir "evaluation_results/repairedSynth_vs_real"
+#diffusion:
+# python -u evaluation_metrics/transition_eval.py   --real_glob "dataset/window_shards/compress-gzip/train/*.npz"   --synth outputs/diffusion_outputs/generated_traces/compress-gzip/synth_100k_step50k_repaired.npz   --max_real_shards 50   --num_events 384   --num_dt_buckets 256   --num_cpus 4   --out_dir "evaluation_results/diffusion_metrics/repairedSynth_vs_real"
 
-# python -u evaluation_metrics/transition_eval.py   --real_glob "dataset/window_shards/compress-gzip/train/*.npz"   --synth outputs/diffusion_outputs/generated_traces/compress-gzip/synth_100k_step50k.npz   --max_real_shards 50   --num_events 384   --num_dt_buckets 256   --num_cpus 4   --out_dir "evaluation_results/originalSynth_vs_real"
+# python -u evaluation_metrics/transition_eval.py   --real_glob "dataset/window_shards/compress-gzip/train/*.npz"   --synth outputs/diffusion_outputs/generated_traces/compress-gzip/synth_100k_step50k.npz   --max_real_shards 50   --num_events 384   --num_dt_buckets 256   --num_cpus 4   --out_dir "evaluation_results/diffusion_metrics/originalSynth_vs_real"
+
+
+#ar
+# python -u evaluation_metrics/transition_eval.py   --real_glob "dataset/window_shards/compress-gzip/train/*.npz"   --synth outputs/art_outputs/generated_traces/compress-gzip/synth_100k_repaired.npz --max_real_shards 50   --num_events 384   --num_dt_buckets 256   --num_cpus 4   --out_dir "evaluation_results/ar_metrics/repairedSynth_vs_real"
+
+# python -u evaluation_metrics/transition_eval.py   --real_glob "dataset/window_shards/compress-gzip/train/*.npz"   --synth outputs/art_outputs/generated_traces/compress-gzip/synth_100k.npz --max_real_shards 50   --num_events 384   --num_dt_buckets 256   --num_cpus 4   --out_dir "evaluation_results/ar_metrics/originalSynth_vs_real"
 
 import argparse, glob
 import numpy as np

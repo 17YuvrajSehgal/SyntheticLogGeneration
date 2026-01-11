@@ -203,9 +203,16 @@ def make_dataloaders(
     base = os.path.join(root_dir, benchmark) if benchmark else root_dir
     
     def get_ds(split):
-        pattern = os.path.join(base, split, "*.npz")
-        paths = sorted(glob.glob(pattern))
-        # If no files, return empty DS? simpler to just pass empty list
+        if benchmark:
+            # Specific benchmark: root/benchmark/split/*.npz
+            pattern = os.path.join(base, split, "*.npz")
+            paths = sorted(glob.glob(pattern))
+        else:
+            # All benchmarks: root/**/split/*.npz (Recursive)
+            # We assume structure: root/BENCH/split/file.npz
+            pattern = os.path.join(root_dir, "**", split, "*.npz")
+            paths = sorted(glob.glob(pattern, recursive=True))
+            
         return NPZShardDataset(paths, config, cache_shards, seed)
 
     train_ds = get_ds("train")

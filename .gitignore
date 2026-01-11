@@ -5,3 +5,6 @@ txt_traces
 temp_md_files
 __pycache__/
 dataset/enriched_parquets
+evaluation_results
+*.pyc
+dataset/window_shards

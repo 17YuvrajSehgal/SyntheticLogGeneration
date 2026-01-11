@@ -164,6 +164,8 @@ class LogDiffusionModel(nn.Module):
         x = torch.randn(batch_size, seq_len, self.d_model, device=device)
         
         for t in reversed(range(self.max_timesteps)):
+            if t % 100 == 0:
+                print(f"  [Diffusion] Denoising step {t}/{self.max_timesteps}...", end="\r")
             t_tensor = torch.full((batch_size,), t, device=device).long()
             
             # Predict noise

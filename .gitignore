@@ -8,3 +8,5 @@ dataset/enriched_parquets
 evaluation_results
 *.pyc
 dataset/window_shards
+__pycache__/
+*.pyc

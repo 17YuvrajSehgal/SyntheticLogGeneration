@@ -35,7 +35,9 @@ echo "Node: $(hostname)"
 # - Batch size 256 for high throughput
 
 python -u train_experiment.py \
-    --data-root dataset/window_shards \
+    --data-root "$SCRATCH/windowed_npz_256" \
+    --benchmark "scimark2" \
+    --seq-len 256 \
     --channels event dt cpu tid comm ret \
     --model-type diffusion \
     --d-model 512 \
@@ -48,7 +50,7 @@ python -u train_experiment.py \
     --mixed-precision bf16 \
     --compile \
     --log-dir logs_tensorboard \
-    --run-name h100_diffusion_v1
+    --run-name h100_diff_scimark2_256
 
 echo "[DONE] Training finished."
 echo "Date: $(date)"

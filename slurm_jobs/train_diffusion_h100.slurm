@@ -52,3 +52,6 @@ python -u train_experiment.py \
 
 echo "[DONE] Training finished."
 echo "Date: $(date)"
+
+
+#python -u train_experiment.py     --data-root "dataset/window_shards"     --benchmark "scimark2"     --seq-len 256     --channels event dt cpu tid comm ret     --model-type diffusion     --d-model 512     --nhead 8     --num-layers 8     --batch-size 256     --epochs 2     --steps 10     --lr 2e-4     --mixed-precision bf16     --log-dir logs_tensorboard     --run-name h100_diff_scimark2_256

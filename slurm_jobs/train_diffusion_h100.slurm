@@ -48,7 +48,6 @@ python -u train_experiment.py \
     --steps 1000 \
     --lr 2e-4 \
     --mixed-precision bf16 \
-    --compile \
     --log-dir logs_tensorboard \
     --run-name h100_diff_scimark2_256
 

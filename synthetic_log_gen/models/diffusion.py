@@ -151,8 +151,8 @@ class LogDiffusionModel(nn.Module):
         total_loss = latent_loss + 0.1 * recon_loss
         
         return total_loss, {
-            "latent_loss": latent_loss.item(),
-            "recon_loss": recon_loss.item()
+            "latent_loss": latent_loss.detach(),
+            "recon_loss": recon_loss.detach()
         }
     
     @torch.no_grad()

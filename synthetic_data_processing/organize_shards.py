@@ -50,19 +50,31 @@ def organize_dataset(root_dir):
             pass # Not empty
 
 if __name__ == "__main__":
-    # Organize all 3 resolutions
-    roots = [
-        "dataset/window_shards", # The symlinked or main one?
-        # User mentioned these scratch paths, but likely mapped to dataset/window_shards locally or we run this on cluster.
-        # Let's assume user puts path as arg or we verify.
-    ]
-    
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("dirs", nargs="+", help="List of root directory to organize (e.g. dataset/window_shards)")
+    parser.add_argument("dirs", nargs="*", help="List of root directory to organize")
     args = parser.parse_args()
+
+    # Default to SCRATCH directories if no args provided
+    if not args.dirs:
+        scratch = os.environ.get("SCRATCH")
+        if scratch:
+            print(f"Detected SCRATCH: {scratch}")
+            targets = [
+                "windowed_npz_256", 
+                "windowed_npz_1024", 
+                "windowed_npz_4096"
+            ]
+            args.dirs = [os.path.join(scratch, t) for t in targets]
+        else:
+            print("No arguments provided and SCRATCH not set.")
+            print("Usage: python organize_shards.py [dir1] [dir2] ...")
+            exit(1)
     
     for d in args.dirs:
         print(f"Organizing {d}...")
-        organize_dataset(d)
+        if os.path.exists(d):
+            organize_dataset(d)
+        else:
+            print(f"Directory not found: {d}")
         print("Done.")

@@ -4,3 +4,4 @@ dataset/parquet_files_dataset
 txt_traces
 temp_md_files
 __pycache__/
+dataset/enriched_parquets

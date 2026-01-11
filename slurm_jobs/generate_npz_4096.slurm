@@ -1,11 +1,11 @@
 #!/bin/bash
-#SBATCH --job-name=gen_npz
+#SBATCH --job-name=gen_npz_4096
 #SBATCH --account=def-naser2
-#SBATCH --time=6:00:00
+#SBATCH --time=12:00:00
 #SBATCH --cpus-per-task=8
-#SBATCH --mem=64G
-#SBATCH --output=logs/gen_npz_%j.out
-#SBATCH --error=logs/gen_npz_%j.err
+#SBATCH --mem=128G
+#SBATCH --output=logs/gen_npz_4096_%j.out
+#SBATCH --error=logs/gen_npz_4096_%j.err
 
 set -euo pipefail
 
@@ -13,33 +13,24 @@ set -euo pipefail
 module purge
 module load StdEnv/2023
 module load python/3.11
-# PyArrow is needed for reading parquet
 module load arrow/21.0.0
 
 # Paths
 PROJECT_DIR="/project/def-naser2/yuvraj/SyntheticLogGeneration"
 SCRIPT="$PROJECT_DIR/synthetic_data_processing/parquet_to_windowed_npz.py"
-
-# Inputs
 INPUT_DIR="$SCRATCH/enriched_parquet"
 VOCAB_DIR="$PROJECT_DIR/dataset/metadata_all_events"
-
-# Output
-OUTPUT_DIR="$SCRATCH/windowed_npz_1024"
+OUTPUT_DIR="$SCRATCH/windowed_npz_4096"
 
 # Parameters
-SEQ_LEN=1024
-STRIDE=512
+SEQ_LEN=4096
+STRIDE=2048
 
-echo "[INFO] Starting NPZ Generation..."
-echo "       Input:  $INPUT_DIR"
-echo "       Output: $OUTPUT_DIR"
-echo "       Vocab:  $VOCAB_DIR"
-echo "       Window: L=$SEQ_LEN, S=$STRIDE"
-
+echo "[INFO] Starting NPZ Generation (L=$SEQ_LEN, S=$STRIDE)..."
 mkdir -p "$OUTPUT_DIR"
 mkdir -p "$PROJECT_DIR/logs"
 
+# Ensure we have enough memory for large windows
 python -u "$SCRIPT" \
   --input-dir "$INPUT_DIR" \
   --output-dir "$OUTPUT_DIR" \
@@ -47,4 +38,4 @@ python -u "$SCRIPT" \
   --seq-len $SEQ_LEN \
   --stride $STRIDE
 
-echo "[INFO] Done. Data is ready in $OUTPUT_DIR"
+echo "[INFO] Done."

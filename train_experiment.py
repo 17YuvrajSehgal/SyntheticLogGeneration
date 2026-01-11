@@ -64,7 +64,8 @@ def main():
     
     # Optimization Args (H100)
     parser.add_argument("--lr", type=float, default=2e-4)
-    parser.add_argument("--epochs", type=int, default=100)
+    parser.add_argument("--epochs", type=int, default=10)
+    parser.add_argument("--grad-accum-steps", type=int, default=1, help="Gradient accumulation steps")
     parser.add_argument("--mixed-precision", default="no", choices=["no", "fp16", "bf16"], help="Use mixed precision (bf16 for H100)")
     parser.add_argument("--compile", action="store_true", help="Use torch.compile() (PyTorch 2.0)")
     
@@ -76,7 +77,9 @@ def main():
     
     # --- Optimization Setup (TF32) ---
     # Enable TF32 for Ampere/Hopper GPUs (significant speedup)
-    torch.backends.cuda.matmul.allow_tf32 = True
+    # Fix warning by using new API if available, else fallback
+    if hasattr(torch.backends.cuda.matmul, 'allow_tf32'):
+        torch.backends.cuda.matmul.allow_tf32 = True
     torch.backends.cudnn.allow_tf32 = True
     
     # Setup Logging
@@ -89,7 +92,7 @@ def main():
     log_path = os.path.join(args.log_dir, args.run_name)
     writer = SummaryWriter(log_path)
     print(f"[Experiment] Logging to {log_path}")
-    print(f"[Experiment] Optimizations: Mixed Precision={args.mixed_precision}, Compile={args.compile}, TF32=True")
+    print(f"[Experiment] Optimizations: Mixed Precision={args.mixed_precision}, Compile={args.compile}, Accum={args.grad_accum_steps}")
 
     # 1. Setup Data
     cfg = SampleConfig(
@@ -148,18 +151,18 @@ def main():
     dtype_map = {"no": torch.float32, "fp16": torch.float16, "bf16": torch.bfloat16}
     mp_dtype = dtype_map[args.mixed_precision]
     use_amp = args.mixed_precision != "no"
-    scaler = torch.amp.GradScaler(enabled=(args.mixed_precision == "fp16")) # Scaler mostly needed for fp16, bf16 doesn't need it but harmless
+    scaler = torch.amp.GradScaler(enabled=(args.mixed_precision == "fp16")) 
     
     global_step = 0
     print(f"[Train] Starting {args.epochs} epochs on {device}...")
     
     for epoch in range(args.epochs):
         model.train()
+        optimizer.zero_grad() # Initialize gradient
+        
         for i, batch in enumerate(train_dl):
             # Move batch to device
             batch = {k: v.to(device) for k, v in batch.items()}
-            
-            optimizer.zero_grad()
             
             # Autocast Context
             with torch.amp.autocast(device_type=device.type if device.type != 'cpu' else 'cuda', dtype=mp_dtype, enabled=use_amp):
@@ -172,22 +175,30 @@ def main():
                 else:
                     loss = torch.tensor(0.0, requires_grad=True, device=device)
                     metrics = {}
+                
+                # Scale loss for accumulation
+                loss = loss / args.grad_accum_steps
 
             # Backward with Scaler
             scaler.scale(loss).backward()
-            scaler.step(optimizer)
-            scaler.update()
             
-            # Logging
-            if i % 10 == 0:
-                writer.add_scalar("Train/Loss", loss.item(), global_step)
-                for k, v in metrics.items():
-                    val = v.item() if isinstance(v, torch.Tensor) else v
-                    writer.add_scalar(f"Train/{k}", val, global_step)
+            # Step only after N batches
+            if (i + 1) % args.grad_accum_steps == 0:
+                scaler.step(optimizer)
+                scaler.update()
+                optimizer.zero_grad()
+                global_step += 1
                 
-                print(f"Epoch {epoch} | Step {global_step} | Loss: {loss.item():.4f}", end="\r")
-            
-            global_step += 1
+                # Logging (only on step)
+                if global_step % 10 == 0:
+                    # Restore loss value for logging
+                    log_loss = loss.item() * args.grad_accum_steps
+                    writer.add_scalar("Train/Loss", log_loss, global_step)
+                    for k, v in metrics.items():
+                        val = v.item() if isinstance(v, torch.Tensor) else v
+                        writer.add_scalar(f"Train/{k}", val, global_step)
+                    
+                    print(f"Epoch {epoch} | Step {global_step} | Loss: {log_loss:.4f}", end="\r")
             
         # Validation Loop (Optional: Implement sampling here)
         print(f"\n[Epoch {epoch}] Completed.")

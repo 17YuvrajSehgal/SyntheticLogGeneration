@@ -1,6 +1,6 @@
 #SBATCH --job-name=train_diff_h100
 #SBATCH --account=def-naser2
-#SBATCH --gpus-per-node=h100:1  # Request full H100 (80GB)
+#SBATCH --gpus-per-node=h100:1 
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=64G
 #SBATCH --time=24:00:00
@@ -9,7 +9,7 @@
 
 set -euo pipefail
 
-# 1. Environment Setup (Matched to reference)
+# 1. Environment Setup
 module --force purge
 module load StdEnv/2023 python/3.11 cuda/12.2
 
@@ -22,15 +22,16 @@ export PYTHONUNBUFFERED=1
 mkdir -p "$REPO/logs/diffusion_slurm"
 mkdir -p "$REPO/logs_tensorboard"
 
-echo "[START] Training Diffusion Model on H100 (Full Node)"
+echo "[START] Training Diffusion Model"
 echo "Date: $(date)"
 echo "Node: $(hostname)"
 
 # 3. Run Training
-# Optimizations:
+# Optimizations for 10GB Partition:
 # - TF32 automatically enabled in script
 # - BF16 mixed precision for H100
-# - Batch size 256 for high throughput (Fits in 80GB)
+# - Batch size 64 (Fits in 10GB)
+# - Grad Accumulation 4 (Effective Batch Size = 256)
 
 python -u train_experiment.py \
     --data-root "$SCRATCH/windowed_npz_256" \
@@ -41,7 +42,8 @@ python -u train_experiment.py \
     --d-model 512 \
     --nhead 8 \
     --num-layers 8 \
-    --batch-size 256 \
+    --batch-size 64 \
+    --grad-accum-steps 4 \
     --epochs 100 \
     --steps 1000 \
     --lr 2e-4 \

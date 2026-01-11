@@ -1,7 +1,6 @@
-#!/bin/bash
 #SBATCH --job-name=train_diff_h100
 #SBATCH --account=def-naser2
-#SBATCH --gres=gpu:1
+#SBATCH --gpus-per-node=h100:1  # Request full H100 (80GB)
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=64G
 #SBATCH --time=24:00:00
@@ -23,7 +22,7 @@ export PYTHONUNBUFFERED=1
 mkdir -p "$REPO/logs/diffusion_slurm"
 mkdir -p "$REPO/logs_tensorboard"
 
-echo "[START] Training Diffusion Model on H100"
+echo "[START] Training Diffusion Model on H100 (Full Node)"
 echo "Date: $(date)"
 echo "Node: $(hostname)"
 
@@ -31,8 +30,7 @@ echo "Node: $(hostname)"
 # Optimizations:
 # - TF32 automatically enabled in script
 # - BF16 mixed precision for H100
-# - Compile enabled
-# - Batch size 256 for high throughput
+# - Batch size 256 for high throughput (Fits in 80GB)
 
 python -u train_experiment.py \
     --data-root "$SCRATCH/windowed_npz_256" \

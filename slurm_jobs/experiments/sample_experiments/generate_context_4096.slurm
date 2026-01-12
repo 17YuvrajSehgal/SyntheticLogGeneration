@@ -35,6 +35,9 @@ python -u sample_diffusion.py \
   --seq-len 4096 \
   --num-samples 100 \
   --batch-size 32 \
+  --num-cpus 4 \
+  --tid-buckets 256 \
+  --fd-cap 1025 \
   --device cuda
 
 echo "[DONE] Saved to $OUT"

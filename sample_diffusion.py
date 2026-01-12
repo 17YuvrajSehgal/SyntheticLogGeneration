@@ -6,15 +6,24 @@ import numpy as np
 from synthetic_log_gen.models import LogDiffusionModel
 from synthetic_log_gen.data.dataset import ALL_CHANNELS
 
-def get_vocab_sizes(vocab_dir):
-    # Same logic as train_experiment.py
-    # Ideally should be refactored into a shared utility, 
-    # but duplicating for standalone script simplicity for now.
+def get_vocab_sizes(vocab_dir, args):
+    """
+    Load vocab sizes from json files or arguments.
+    """
     sizes = {}
-    sizes["event"] = 400 
-    sizes["cpu"] = 9
-    sizes["tid"] = 256
-    sizes["fd"] = 1025
+    
+    # Event ID: Load from vocab.json
+    try:
+        with open(os.path.join(vocab_dir, "vocab.json")) as f:
+            sizes["event"] = len(json.load(f))
+    except Exception as e:
+        print(f"[WARN] Could not load vocab.json from {vocab_dir}: {e}. Using default 384.")
+        sizes["event"] = 384
+    
+    # CPU, TID, FD from args
+    sizes["cpu"] = args.num_cpus
+    sizes["tid"] = args.tid_buckets
+    sizes["fd"] = args.fd_cap
     
     try:
         with open(os.path.join(vocab_dir, "vocab_comm.json")) as f:
@@ -40,6 +49,11 @@ def main():
     parser.add_argument("--steps", type=int, default=1000)
     parser.add_argument("--vocab-dir", default="dataset/metadata_all_events")
     
+    # Vocab/Dim Args (New)
+    parser.add_argument("--num-cpus", type=int, default=4, help="Number of CPU cores")
+    parser.add_argument("--tid-buckets", type=int, default=256, help="Number of TID hash buckets")
+    parser.add_argument("--fd-cap", type=int, default=1025, help="Cap for File Descriptors")
+    
     # Generation Config
     parser.add_argument("--num-samples", type=int, default=1000)
     parser.add_argument("--batch-size", type=int, default=32)
@@ -49,7 +63,7 @@ def main():
     args = parser.parse_args()
     
     # 1. Init Model
-    vocab_sizes = get_vocab_sizes(args.vocab_dir)
+    vocab_sizes = get_vocab_sizes(args.vocab_dir, args)
     print(f"[Info] Vocab sizes: {vocab_sizes}")
     
     model = LogDiffusionModel(

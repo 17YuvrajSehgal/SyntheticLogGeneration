@@ -40,6 +40,9 @@ python -u train_experiment.py \
     --nhead 8 \
     --num-layers 8 \
     --batch-size 256 \
+    --num-cpus 4\
+    --tid-buckets 256\
+    --fd-cap 1025 \
     --epochs 100 \
     --steps 1000 \
     --lr 2e-4 \

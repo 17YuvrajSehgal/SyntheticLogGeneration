@@ -11,20 +11,16 @@ from datetime import datetime
 from synthetic_log_gen.data.dataset import make_dataloaders, SampleConfig, ALL_CHANNELS
 from synthetic_log_gen.models import LogDiffusionModel
 
-def get_vocab_sizes(vocab_dir):
+def get_vocab_sizes(vocab_dir, args):
     """
-    Load vocab sizes from json files or hardcoded logic.
+    Load vocab sizes from json files or arguments.
     """
     sizes = {}
 
-    # CPU (0-3)
-    sizes["cpu"] = 4
-    
-    # TID (Hash) -> 256
-    sizes["tid"] = 256
-    
-    # FD (Cap) -> 1025
-    sizes["fd"] = 1025
+    # CPU, TID, FD from args
+    sizes["cpu"] = args.num_cpus
+    sizes["tid"] = args.tid_buckets
+    sizes["fd"] = args.fd_cap
     
     try:
         with open(os.path.join(vocab_dir, "vocab.json")) as f:
@@ -54,6 +50,11 @@ def main():
     parser.add_argument("--seq-len", type=int, default=1024)
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--num-workers", type=int, default=4)
+
+    # Vocab/Dim Args (New)
+    parser.add_argument("--num-cpus", type=int, default=4, help="Number of CPU cores (dataset specific)")
+    parser.add_argument("--tid-buckets", type=int, default=256, help="Number of TID hash buckets")
+    parser.add_argument("--fd-cap", type=int, default=1025, help="Cap for File Descriptors")
     
     # Model Args
     parser.add_argument("--model-type", default="diffusion", choices=["dummy", "diffusion"])
@@ -109,7 +110,7 @@ def main():
     
     # 2. Setup Model
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    vocab_sizes = get_vocab_sizes(args.vocab_dir)
+    vocab_sizes = get_vocab_sizes(args.vocab_dir, args)
     print(f"[Info] Vocab Sizes: {vocab_sizes}")
     
     if args.model_type == "diffusion":

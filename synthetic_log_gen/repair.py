@@ -27,7 +27,11 @@ def repair_traces(trace_path, constraints_path, output_path):
     cpus = data['cpu'].copy()
     
     allowed_trans_adj = {int(k): list(v) for k, v in constraints["allowed_transitions"].items()}
-    # event_probs = {int(k): v for k, v in constraints.get("event_probs", {}).items()}
+    
+    # Load probabilities (default to uniform if missing)
+    # Keys in json are strings, convert to int
+    raw_probs = constraints.get("event_probs", {})
+    event_probs = {int(k): v for k, v in raw_probs.items()}
     
     # DT Constraints
     dt_constraints = {int(k): v for k, v in constraints.get("dt_constraints", {}).items()}
@@ -43,10 +47,6 @@ def repair_traces(trace_path, constraints_path, output_path):
     total_checks = 0
     
     # Strategy: Greedy Forward Repair
-    # If e_t -> e_{t+1} is invalid:
-    #   Resample e_{t+1} from Allowed(e_t).
-    #   Prefer events that are likely? Or random?
-    #   For "Hard Guarantees", just picking ANY valid next event satisfies the immediate transition.
     
     for i in tqdm(range(num_samples), desc="Repairing traces"):
         # 1. Event Transition Repair
@@ -60,10 +60,17 @@ def repair_traces(trace_path, constraints_path, output_path):
                 if next_e not in allowed_next:
                     # Invalid! Repair.
                     if allowed_next:
-                        # Pick a valid replacement
-                        # TODO: Use probability distribution if available?
-                        # For now: Random valid
-                        fixed_next = random.choice(allowed_next)
+                        # Probabilistic Repair
+                        # Filter weights for allowed candidates
+                        weights = [event_probs.get(cand, 1e-6) for cand in allowed_next]
+                        
+                        # Normalize not strictly needed for random.choices but good for debugging
+                        # If sum is 0 (rare), fallback to uniform
+                        if sum(weights) == 0:
+                            fixed_next = random.choice(allowed_next)
+                        else:
+                            fixed_next = random.choices(allowed_next, weights=weights, k=1)[0]
+                            
                         events[i, t+1] = fixed_next
                         
                         # Fix DT for the new event!

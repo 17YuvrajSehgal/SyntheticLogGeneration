@@ -9,7 +9,7 @@ def load_npz(path):
     with np.load(path) as data:
         return data['event'], data['dt'], data['cpu'], data['tid'], data['fd'], data['comm'], data['ret']
 
-def learn_constraints(real_glob, num_events, num_dt_buckets, num_cpus, output_path):
+def learn_constraints(real_glob, num_events, num_cpus, output_path):
     print(f"[INFO] Learning constraints from {real_glob}...")
     
     # Initialize structures
@@ -102,15 +102,15 @@ def learn_constraints(real_glob, num_events, num_dt_buckets, num_cpus, output_pa
         if dts:
             unique_dts = sorted(list(set(dts)))
             final_dt_constraints[e_id] = {
-                "min": min(unique_dts),
-                "max": max(unique_dts),
-                "allowed_set": unique_dts # List for JSON
+                "min": float(min(unique_dts)),
+                "max": float(max(unique_dts)),
+                "allowed_set": [float(x) for x in unique_dts] # List for JSON
             }
         else:
             # Event never observed?
             final_dt_constraints[e_id] = {
-                "min": 0,
-                "max": num_dt_buckets - 1,
+                "min": 0.0,
+                "max": 0.0,
                 "allowed_set": []
             }
 
@@ -145,7 +145,6 @@ def learn_constraints(real_glob, num_events, num_dt_buckets, num_cpus, output_pa
         "event_probs": event_probs,
         "metadata": {
             "num_events": num_events,
-            "num_dt_buckets": num_dt_buckets,
             "num_cpus": num_cpus
         }
     }
@@ -162,13 +161,14 @@ def learn_constraints(real_glob, num_events, num_dt_buckets, num_cpus, output_pa
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--real_glob", required=True, help="Glob pattern for real training shards")
+    parser.add_argument("--real_glob", required=True, help="Glob pattern for real training shards (recursive)")
     parser.add_argument("--output", required=True, help="Path to save constraints.json")
-    parser.add_argument("--num_events", type=int, default=384)
-    parser.add_argument("--num_dt_buckets", type=int, default=256)
-    parser.add_argument("--num_cpus", type=int, default=4)
-    # limit number of shards to process for speed?
+    parser.add_argument("--num_events", type=int, default=384, help="Vocabulary size of Event IDs")
+    parser.add_argument("--num_cpus", type=int, default=4, help="Number of CPUs (for metadata)")
+    # limit the number of shards to process for speed?
     
     args = parser.parse_args()
     
-    learn_constraints(args.real_glob, args.num_events, args.num_dt_buckets, args.num_cpus, args.output)
+    learn_constraints(args.real_glob, args.num_events, args.num_cpus, args.output)
+
+# python data_processing/learn_constraints.py --real_glob "dataset/window_shards/windowed_npz_256/**/*.npz" --output dataset/constraints_universal.json --num_events 384 --num_cpus 4

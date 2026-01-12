@@ -22,14 +22,18 @@ echo "Host: $(hostname)"
 echo "PWD:  $(pwd)"
 
 # ---- Learn Constraints ----
-# NOTE: Update glob patterns if you want to learn from all benchmarks or a specific one.
-# Here we default to compress-gzip as an example.
 
-python -u -m synthetic_data_processing.learn_constraints \
-  --real_glob "dataset/window_shards/compress-gzip/train/*.npz" \
-  --output "dataset/constraints.json" \
+# Use $SCRATCH directly or define a variable
+REAL_GLOB="$SCRATCH/windowed_npz_256/**/*.npz"
+OUTPUT="dataset/constraints_universal.json"
+
+echo "Learning constraints from: $REAL_GLOB"
+echo "Saving to: $OUTPUT"
+
+python -u -m data_processing.learn_constraints \
+  --real_glob "$REAL_GLOB" \
+  --output "$OUTPUT" \
   --num_events 384 \
-  --num_dt_buckets 256 \
   --num_cpus 4
 
 echo "Constraint learning completed."

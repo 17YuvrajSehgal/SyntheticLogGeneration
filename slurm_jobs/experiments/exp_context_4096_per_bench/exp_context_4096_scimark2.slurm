@@ -21,7 +21,6 @@ export PYTHONUNBUFFERED=1
 BENCHMARK="scimark2"
 RUN_NAME="exp_context_4096_scimark2"
 
-# Put everything (including logs) inside the run folder
 EXPERIMENT_DIR="$REPO/experiments_results/$BENCHMARK/exp_context_4096/$RUN_NAME"
 mkdir -p "$EXPERIMENT_DIR"
 

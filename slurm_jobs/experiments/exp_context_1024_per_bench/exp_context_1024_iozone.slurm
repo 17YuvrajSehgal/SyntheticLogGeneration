@@ -5,8 +5,8 @@
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=64G
 #SBATCH --time=12:00:00
-#SBATCH --output=/project/def-naser2/yuvraj/SyntheticLogGeneration/experiments_results/iozone/exp_context_1024/slurm_%j.out
-#SBATCH --error=/project/def-naser2/yuvraj/SyntheticLogGeneration/experiments_results/iozone/exp_context_1024/slurm_%j.err
+#SBATCH --output=/project/def-naser2/yuvraj/SyntheticLogGeneration/experiments_results/iozone/exp_context_1024/exp_context_1024_iozone/slurm_%j.out
+#SBATCH --error=/project/def-naser2/yuvraj/SyntheticLogGeneration/experiments_results/iozone/exp_context_1024/exp_context_1024_iozone/slurm_%j.err
 
 set -euo pipefail
 
@@ -19,9 +19,10 @@ source "$REPO/.venv/bin/activate"
 export PYTHONUNBUFFERED=1
 
 BENCHMARK="iozone"
-RUN_NAME="exp_context_1024_${BENCHMARK}"
+RUN_NAME="exp_context_1024_iozone"
 
-EXPERIMENT_DIR="$REPO/experiments_results/${BENCHMARK}/exp_context_1024"
+# Put everything (including logs) inside the run folder
+EXPERIMENT_DIR="$REPO/experiments_results/$BENCHMARK/exp_context_1024/$RUN_NAME"
 mkdir -p "$EXPERIMENT_DIR"
 
 echo "[START] Experiment: $RUN_NAME"

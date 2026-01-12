@@ -5,8 +5,8 @@
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=64G
 #SBATCH --time=48:00:00
-#SBATCH --output=/project/def-naser2/yuvraj/SyntheticLogGeneration/experiments_results/pybench/exp_context_256/slurm_%j.out
-#SBATCH --error=/project/def-naser2/yuvraj/SyntheticLogGeneration/experiments_results/pybench/exp_context_256/slurm_%j.err
+#SBATCH --output=/project/def-naser2/yuvraj/SyntheticLogGeneration/experiments_results/pybench/exp_context_256/exp_context_256_pybench/slurm_%j.out
+#SBATCH --error=/project/def-naser2/yuvraj/SyntheticLogGeneration/experiments_results/pybench/exp_context_256/exp_context_256_pybench/slurm_%j.err
 
 set -euo pipefail
 
@@ -19,9 +19,10 @@ source "$REPO/.venv/bin/activate"
 export PYTHONUNBUFFERED=1
 
 BENCHMARK="pybench"
-RUN_NAME="exp_context_256_${BENCHMARK}"
+RUN_NAME="exp_context_256_pybench"
 
-EXPERIMENT_DIR="$REPO/experiments_results/${BENCHMARK}/exp_context_256"
+# Put everything (including logs) inside the run folder
+EXPERIMENT_DIR="$REPO/experiments_results/$BENCHMARK/exp_context_256/$RUN_NAME"
 mkdir -p "$EXPERIMENT_DIR"
 
 echo "[START] Experiment: $RUN_NAME"

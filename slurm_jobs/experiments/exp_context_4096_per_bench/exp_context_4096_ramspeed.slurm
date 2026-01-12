@@ -5,8 +5,8 @@
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=64G
 #SBATCH --time=12:00:00
-#SBATCH --output=/project/def-naser2/yuvraj/SyntheticLogGeneration/experiments_results/ramspeed/exp_context_4096/slurm_%j.out
-#SBATCH --error=/project/def-naser2/yuvraj/SyntheticLogGeneration/experiments_results/ramspeed/exp_context_4096/slurm_%j.err
+#SBATCH --output=/project/def-naser2/yuvraj/SyntheticLogGeneration/experiments_results/ramspeed/exp_context_4096/exp_context_4096_ramspeed/slurm_%j.out
+#SBATCH --error=/project/def-naser2/yuvraj/SyntheticLogGeneration/experiments_results/ramspeed/exp_context_4096/exp_context_4096_ramspeed/slurm_%j.err
 
 set -euo pipefail
 
@@ -19,9 +19,10 @@ source "$REPO/.venv/bin/activate"
 export PYTHONUNBUFFERED=1
 
 BENCHMARK="ramspeed"
-RUN_NAME="exp_context_4096_${BENCHMARK}"
+RUN_NAME="exp_context_4096_ramspeed"
 
-EXPERIMENT_DIR="$REPO/experiments_results/${BENCHMARK}/exp_context_4096"
+# Put everything (including logs) inside the run folder
+EXPERIMENT_DIR="$REPO/experiments_results/$BENCHMARK/exp_context_4096/$RUN_NAME"
 mkdir -p "$EXPERIMENT_DIR"
 
 echo "[START] Experiment: $RUN_NAME"

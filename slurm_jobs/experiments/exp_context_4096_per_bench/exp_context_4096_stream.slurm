@@ -46,7 +46,7 @@ python -u train_experiment.py \
     --steps 1000 \
     --lr 2e-4 \
     --mixed-precision bf16 \
-    --log-dir experiments_results \
+    --log-dir "$EXPERIMENT_DIR" \
     --run-name "$RUN_NAME"
 
 echo "[DONE] Finished"

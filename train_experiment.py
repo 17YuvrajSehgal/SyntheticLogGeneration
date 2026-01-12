@@ -16,12 +16,9 @@ def get_vocab_sizes(vocab_dir):
     Load vocab sizes from json files or hardcoded logic.
     """
     sizes = {}
-    
-    # Event ID 
-    sizes["event"] = 400 
-    
-    # CPU (0-7) -> 9
-    sizes["cpu"] = 9
+
+    # CPU (0-3)
+    sizes["cpu"] = 4
     
     # TID (Hash) -> 256
     sizes["tid"] = 256
@@ -30,6 +27,9 @@ def get_vocab_sizes(vocab_dir):
     sizes["fd"] = 1025
     
     try:
+        with open(os.path.join(vocab_dir, "vocab.json")) as f:
+            sizes["event"] = len(json.load(f))
+
         with open(os.path.join(vocab_dir, "vocab_comm.json")) as f:
             sizes["comm"] = len(json.load(f))
         
@@ -37,6 +37,7 @@ def get_vocab_sizes(vocab_dir):
             sizes["ret"] = len(json.load(f))
     except Exception as e:
         print(f"[WARN] Could not load vocabs from {vocab_dir}: {e}. Using defaults.")
+        sizes["event"] = 384
         sizes["comm"] = 100
         sizes["ret"] = 1050
 

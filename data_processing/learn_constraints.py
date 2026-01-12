@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 def load_npz(path):
     with np.load(path) as data:
-        return data['event'], data['dt'], data['cpu']
+        return data['event'], data['dt'], data['cpu'], data['tid'], data['fd'], data['comm'], data['ret']
 
 def learn_constraints(real_glob, num_events, num_dt_buckets, num_cpus, output_path):
     print(f"[INFO] Learning constraints from {real_glob}...")
@@ -17,53 +17,83 @@ def learn_constraints(real_glob, num_events, num_dt_buckets, num_cpus, output_pa
     event_dt_stats = {e: [] for e in range(num_events)} # store observed dt buckets for each event
     allowed_cpus = set()
     
-    files = sorted(glob.glob(real_glob))
+    # New: Per-event constraints
+    event_cpu_map = {e: set() for e in range(num_events)}
+    event_tid_map = {e: set() for e in range(num_events)}
+    event_fd_map = {e: set() for e in range(num_events)}
+    event_comm_map = {e: set() for e in range(num_events)}
+    event_ret_map = {e: set() for e in range(num_events)}
+    
+    event_counts = {e: 0 for e in range(num_events)}
+    
+    files = glob.glob(real_glob, recursive=True)
+    
+    # Auto-enable recursion if user didn't specify ** but possibly meant it
+    if "**" not in real_glob and "*.npz" in real_glob:
+        alt_glob = real_glob.replace("*.npz", "**/*.npz")
+        files_alt = glob.glob(alt_glob, recursive=True)
+        files.extend(files_alt)
+        
+    # Deduplicate and sort
+    files = sorted(list(set(files)))
+    
     if not files:
-        print(f"[ERROR] No files found matching {real_glob}")
+        print(f"[ERROR] No files found matching {real_glob} (recursive search attempted)")
         return
 
     for f in tqdm(files, desc="Processing shards"):
-        ev, dt, cpu = load_npz(f)
+        ev, dt, cpu, tid, fd, comm, ret = load_npz(f)
         
         # Flatten for simpler processing
         ev_flat = ev.reshape(-1)
         dt_flat = dt.reshape(-1)
         cpu_flat = cpu.reshape(-1)
+        tid_flat = tid.reshape(-1)
+        fd_flat = fd.reshape(-1)
+        comm_flat = comm.reshape(-1)
+        ret_flat = ret.reshape(-1)
         
         # 1. Allowed transitions (Bigrams)
-        # Iterate over windows to respect boundaries? 
-        # Actually, transitions happen within windows. Between windows is undefined in this dataset format (independent shuffling)
-        # So we process row by row.
-        
         # Vectorized bigram extraction
         e_curr = ev[:, :-1]
         e_next = ev[:, 1:]
         
-        # We can zip them. To be fast, we can use unique rows
-        # stack: (N*(L-1), 2)
         transitions = np.stack([e_curr.reshape(-1), e_next.reshape(-1)], axis=1)
         unique_trans = np.unique(transitions, axis=0)
-        
         for t in unique_trans:
             allowed_transitions.add(tuple(t.tolist()))
 
-        # 2. Event-conditioned DT stats
-        # For memory efficiency, we won't store ALL dt values. We can store min/max and maybe a histogram if we want percentiles later.
-        # But for "hard guarantees", min/max or "observed set" is best.
-        # Let's simple store the set of observed dt buckets for each event.
+        # 2. Event-conditioned constraints
+        unique_events_in_shard = np.unique(ev_flat)
         
-        # Group dt by event
-        # This can be slow in pure python. Let's use numpy.
-        for e_id in np.unique(ev_flat):
+        for e_id in unique_events_in_shard:
             mask = (ev_flat == e_id)
+            
+            # DT
             observed_dts = np.unique(dt_flat[mask])
             event_dt_stats[int(e_id)].extend(observed_dts.tolist())
             
-        # 3. Allowed CPUs
-        unique_cpus = np.unique(cpu_flat)
-        for c in unique_cpus:
-            allowed_cpus.add(int(c))
+            # CPU
+            observed_cpus_local = np.unique(cpu_flat[mask])
+            for c in observed_cpus_local:
+                event_cpu_map[int(e_id)].add(int(c))
+                allowed_cpus.add(int(c))
             
+            # TID
+            for v in np.unique(tid_flat[mask]): event_tid_map[int(e_id)].add(int(v))
+            
+            # FD
+            for v in np.unique(fd_flat[mask]): event_fd_map[int(e_id)].add(int(v))
+            
+            # COMM
+            for v in np.unique(comm_flat[mask]): event_comm_map[int(e_id)].add(int(v))
+            
+            # RET
+            for v in np.unique(ret_flat[mask]): event_ret_map[int(e_id)].add(int(v))
+                
+            # Counts
+            event_counts[int(e_id)] += int(np.sum(mask))
+
     # Post-process
     
     # Consolidate dt stats: instead of big list, just keep the Set of allowed buckets
@@ -92,10 +122,27 @@ def learn_constraints(real_glob, num_events, num_dt_buckets, num_cpus, output_pa
     for e in adj_list:
         adj_list[e].sort()
 
+    # Format CPU maps and others
+    final_cpu_constraints = {e: sorted(list(vals)) for e, vals in event_cpu_map.items()}
+    final_tid_constraints = {e: sorted(list(vals)) for e, vals in event_tid_map.items()}
+    final_fd_constraints = {e: sorted(list(vals)) for e, vals in event_fd_map.items()}
+    final_comm_constraints = {e: sorted(list(vals)) for e, vals in event_comm_map.items()}
+    final_ret_constraints = {e: sorted(list(vals)) for e, vals in event_ret_map.items()}
+    
+    # Calculate Probabilities
+    total_events = sum(event_counts.values())
+    event_probs = {e: count / total_events if total_events > 0 else 0.0 for e, count in event_counts.items()}
+
     constraints = {
         "allowed_transitions": adj_list,
         "dt_constraints": final_dt_constraints,
         "allowed_cpus": sorted(list(allowed_cpus)),
+        "event_cpu_constraints": final_cpu_constraints,
+        "event_tid_constraints": final_tid_constraints,
+        "event_fd_constraints": final_fd_constraints,
+        "event_comm_constraints": final_comm_constraints,
+        "event_ret_constraints": final_ret_constraints,
+        "event_probs": event_probs,
         "metadata": {
             "num_events": num_events,
             "num_dt_buckets": num_dt_buckets,

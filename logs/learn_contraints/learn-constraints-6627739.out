@@ -1,6 +1,0 @@
-Host: c202.nibi.sharcnet
-PWD:  /project/6083487/yuvraj/SyntheticLogGeneration
-[INFO] Learning constraints from dataset/window_shards/compress-gzip/train/*.npz...
-[INFO] Saving constraints to dataset/constraints.json...
-[INFO] Done. Found 18731 unique transitions.
-Constraint learning completed.

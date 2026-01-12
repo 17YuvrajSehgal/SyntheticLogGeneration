@@ -34,6 +34,7 @@ python -u -m data_processing.learn_constraints \
   --real_glob "$REAL_GLOB" \
   --output "$OUTPUT" \
   --num_events 384 \
-  --num_cpus 4
+  --num_cpus 4 \
+  --workers $SLURM_CPUS_PER_TASK
 
 echo "Constraint learning completed."

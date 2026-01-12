@@ -3,140 +3,185 @@ import glob
 import json
 import numpy as np
 import os
+import multiprocessing
 from tqdm import tqdm
+from functools import partial
 
 def load_npz(path):
     with np.load(path) as data:
         return data['event'], data['dt'], data['cpu'], data['tid'], data['fd'], data['comm'], data['ret']
 
-def learn_constraints(real_glob, num_events, num_cpus, output_path):
+def process_shard(path):
+    """
+    Process a single NPZ shard and return partial constraints.
+    """
+    try:
+        ev, dt, cpu, tid, fd, comm, ret = load_npz(path)
+    except Exception as e:
+        print(f"[WARN] Failed to load {path}: {e}")
+        return None
+
+    # Partial results
+    partial_transitions = set()
+    partial_dt_stats = {} # e_id -> list of dts
+    partial_cpu_map = {}  # e_id -> set of cpus
+    partial_tid_map = {}
+    partial_fd_map = {}
+    partial_comm_map = {}
+    partial_ret_map = {}
+    partial_counts = {}
+    partial_allowed_cpus = set()
+
+    # Flatten
+    ev_flat = ev.reshape(-1)
+    dt_flat = dt.reshape(-1)
+    cpu_flat = cpu.reshape(-1)
+    tid_flat = tid.reshape(-1)
+    fd_flat = fd.reshape(-1)
+    comm_flat = comm.reshape(-1)
+    ret_flat = ret.reshape(-1)
+    
+    # 1. Transitions
+    e_curr = ev[:, :-1]
+    e_next = ev[:, 1:]
+    transitions = np.stack([e_curr.reshape(-1), e_next.reshape(-1)], axis=1)
+    unique_trans = np.unique(transitions, axis=0)
+    for t in unique_trans:
+        partial_transitions.add(tuple(t.tolist()))
+
+    # 2. Per-event Stats
+    unique_events = np.unique(ev_flat)
+    for e_id in unique_events:
+        e_id = int(e_id)
+        mask = (ev_flat == e_id)
+        
+        # DT (store observed values, prevent explosion by using unique locally)
+        dts = np.unique(dt_flat[mask]).tolist()
+        partial_dt_stats[e_id] = dts
+        
+        # CPU
+        cpus = np.unique(cpu_flat[mask]).tolist()
+        if e_id not in partial_cpu_map: partial_cpu_map[e_id] = set()
+        partial_cpu_map[e_id].update(cpus)
+        partial_allowed_cpus.update(cpus)
+        
+        # TID
+        tids = np.unique(tid_flat[mask]).tolist()
+        if e_id not in partial_tid_map: partial_tid_map[e_id] = set()
+        partial_tid_map[e_id].update(tids)
+
+        # FD
+        fds = np.unique(fd_flat[mask]).tolist()
+        if e_id not in partial_fd_map: partial_fd_map[e_id] = set()
+        partial_fd_map[e_id].update(fds)
+        
+        # COMM
+        comms = np.unique(comm_flat[mask]).tolist()
+        if e_id not in partial_comm_map: partial_comm_map[e_id] = set()
+        partial_comm_map[e_id].update(comms)
+        
+        # RET
+        rets = np.unique(ret_flat[mask]).tolist()
+        if e_id not in partial_ret_map: partial_ret_map[e_id] = set()
+        partial_ret_map[e_id].update(rets)
+        
+        # Counts
+        partial_counts[e_id] = int(np.sum(mask))
+        
+    return (partial_transitions, partial_dt_stats, partial_allowed_cpus, partial_cpu_map, 
+            partial_tid_map, partial_fd_map, partial_comm_map, partial_ret_map, partial_counts)
+
+def learn_constraints(real_glob, num_events, num_cpus, output_path, workers=None):
     print(f"[INFO] Learning constraints from {real_glob}...")
     
-    # Initialize structures
-    allowed_transitions = set()  # (e_t, e_{t+1})
-    event_dt_stats = {e: [] for e in range(num_events)} # store observed dt buckets for each event
-    allowed_cpus = set()
-    
-    # New: Per-event constraints
-    event_cpu_map = {e: set() for e in range(num_events)}
-    event_tid_map = {e: set() for e in range(num_events)}
-    event_fd_map = {e: set() for e in range(num_events)}
-    event_comm_map = {e: set() for e in range(num_events)}
-    event_ret_map = {e: set() for e in range(num_events)}
-    
-    event_counts = {e: 0 for e in range(num_events)}
-    
     files = glob.glob(real_glob, recursive=True)
-    
-    # Auto-enable recursion if user didn't specify ** but possibly meant it
     if "**" not in real_glob and "*.npz" in real_glob:
         alt_glob = real_glob.replace("*.npz", "**/*.npz")
-        files_alt = glob.glob(alt_glob, recursive=True)
-        files.extend(files_alt)
-        
-    # Deduplicate and sort
+        files.extend(glob.glob(alt_glob, recursive=True))
     files = sorted(list(set(files)))
     
     if not files:
-        print(f"[ERROR] No files found matching {real_glob} (recursive search attempted)")
+        print(f"[ERROR] No files found matching {real_glob}")
         return
 
-    for f in tqdm(files, desc="Processing shards"):
-        ev, dt, cpu, tid, fd, comm, ret = load_npz(f)
-        
-        # Flatten for simpler processing
-        ev_flat = ev.reshape(-1)
-        dt_flat = dt.reshape(-1)
-        cpu_flat = cpu.reshape(-1)
-        tid_flat = tid.reshape(-1)
-        fd_flat = fd.reshape(-1)
-        comm_flat = comm.reshape(-1)
-        ret_flat = ret.reshape(-1)
-        
-        # 1. Allowed transitions (Bigrams)
-        # Vectorized bigram extraction
-        e_curr = ev[:, :-1]
-        e_next = ev[:, 1:]
-        
-        transitions = np.stack([e_curr.reshape(-1), e_next.reshape(-1)], axis=1)
-        unique_trans = np.unique(transitions, axis=0)
-        for t in unique_trans:
-            allowed_transitions.add(tuple(t.tolist()))
+    # Multiprocessing
+    if workers is None:
+        workers = min(multiprocessing.cpu_count(), 32) # Cap at 32 or Available
+    
+    print(f"[INFO] Processing {len(files)} shards with {workers} workers...")
+    
+    # Global Aggregators
+    all_transitions = set()
+    all_dt_stats = {e: set() for e in range(num_events)}
+    all_allowed_cpus = set()
+    
+    all_cpu_map = {e: set() for e in range(num_events)}
+    all_tid_map = {e: set() for e in range(num_events)}
+    all_fd_map = {e: set() for e in range(num_events)}
+    all_comm_map = {e: set() for e in range(num_events)}
+    all_ret_map = {e: set() for e in range(num_events)}
+    
+    all_counts = {e: 0 for e in range(num_events)}
 
-        # 2. Event-conditioned constraints
-        unique_events_in_shard = np.unique(ev_flat)
+    with multiprocessing.Pool(workers) as pool:
+        # Use imap_unordered for better responsiveness with tqdm
+        results = list(tqdm(pool.imap_unordered(process_shard, files), total=len(files), desc="Mining constraints"))
         
-        for e_id in unique_events_in_shard:
-            mask = (ev_flat == e_id)
+    print("[INFO] Aggregating results...")
+    for res in results:
+        if res is None: continue
+        (p_trans, p_dt, p_allowed_cpus, p_cpu, p_tid, p_fd, p_comm, p_ret, p_cnt) = res
+        
+        all_transitions.update(p_trans)
+        all_allowed_cpus.update(p_allowed_cpus)
+        
+        for e, count in p_cnt.items():
+            all_counts[e] += count
             
-            # DT
-            observed_dts = np.unique(dt_flat[mask])
-            event_dt_stats[int(e_id)].extend(observed_dts.tolist())
+        for e, dts in p_dt.items():
+            all_dt_stats[e].update(dts)
             
-            # CPU
-            observed_cpus_local = np.unique(cpu_flat[mask])
-            for c in observed_cpus_local:
-                event_cpu_map[int(e_id)].add(int(c))
-                allowed_cpus.add(int(c))
-            
-            # TID
-            for v in np.unique(tid_flat[mask]): event_tid_map[int(e_id)].add(int(v))
-            
-            # FD
-            for v in np.unique(fd_flat[mask]): event_fd_map[int(e_id)].add(int(v))
-            
-            # COMM
-            for v in np.unique(comm_flat[mask]): event_comm_map[int(e_id)].add(int(v))
-            
-            # RET
-            for v in np.unique(ret_flat[mask]): event_ret_map[int(e_id)].add(int(v))
-                
-            # Counts
-            event_counts[int(e_id)] += int(np.sum(mask))
+        for e, vals in p_cpu.items(): all_cpu_map[e].update(vals)
+        for e, vals in p_tid.items(): all_tid_map[e].update(vals)
+        for e, vals in p_fd.items(): all_fd_map[e].update(vals)
+        for e, vals in p_comm.items(): all_comm_map[e].update(vals)
+        for e, vals in p_ret.items(): all_ret_map[e].update(vals)
 
     # Post-process
-    
-    # Consolidate dt stats: instead of big list, just keep the Set of allowed buckets
+    # DT Stats
     final_dt_constraints = {}
-    for e_id, dts in event_dt_stats.items():
+    for e_id, dts in all_dt_stats.items():
         if dts:
-            unique_dts = sorted(list(set(dts)))
+            unique_dts = sorted(list(dts))
             final_dt_constraints[e_id] = {
                 "min": float(min(unique_dts)),
                 "max": float(max(unique_dts)),
-                "allowed_set": [float(x) for x in unique_dts] # List for JSON
+                "allowed_set": [float(x) for x in unique_dts]
             }
         else:
-            # Event never observed?
-            final_dt_constraints[e_id] = {
-                "min": 0.0,
-                "max": 0.0,
-                "allowed_set": []
-            }
+            final_dt_constraints[e_id] = {"min": 0.0, "max": 0.0, "allowed_set": []}
 
-    # Format allowed transitions as "e_from": [list of allowed e_to]
+    # Transitions
     adj_list = {e: [] for e in range(num_events)}
-    for (src, dst) in allowed_transitions:
+    for (src, dst) in all_transitions:
         adj_list[int(src)].append(int(dst))
-        
-    for e in adj_list:
-        adj_list[e].sort()
+    for e in adj_list: adj_list[e].sort()
 
-    # Format CPU maps and others
-    final_cpu_constraints = {e: sorted(list(vals)) for e, vals in event_cpu_map.items()}
-    final_tid_constraints = {e: sorted(list(vals)) for e, vals in event_tid_map.items()}
-    final_fd_constraints = {e: sorted(list(vals)) for e, vals in event_fd_map.items()}
-    final_comm_constraints = {e: sorted(list(vals)) for e, vals in event_comm_map.items()}
-    final_ret_constraints = {e: sorted(list(vals)) for e, vals in event_ret_map.items()}
-    
-    # Calculate Probabilities
-    total_events = sum(event_counts.values())
-    event_probs = {e: count / total_events if total_events > 0 else 0.0 for e, count in event_counts.items()}
+    # Maps
+    final_cpu_constraints = {e: sorted(list(vals)) for e, vals in all_cpu_map.items()}
+    final_tid_constraints = {e: sorted(list(vals)) for e, vals in all_tid_map.items()}
+    final_fd_constraints = {e: sorted(list(vals)) for e, vals in all_fd_map.items()}
+    final_comm_constraints = {e: sorted(list(vals)) for e, vals in all_comm_map.items()}
+    final_ret_constraints = {e: sorted(list(vals)) for e, vals in all_ret_map.items()}
+
+    # Probabilities
+    total_events = sum(all_counts.values())
+    event_probs = {e: count / total_events if total_events > 0 else 0.0 for e, count in all_counts.items()}
 
     constraints = {
         "allowed_transitions": adj_list,
         "dt_constraints": final_dt_constraints,
-        "allowed_cpus": sorted(list(allowed_cpus)),
+        "allowed_cpus": sorted(list(all_allowed_cpus)),
         "event_cpu_constraints": final_cpu_constraints,
         "event_tid_constraints": final_tid_constraints,
         "event_fd_constraints": final_fd_constraints,
@@ -151,13 +196,12 @@ def learn_constraints(real_glob, num_events, num_cpus, output_path):
     
     print(f"[INFO] Saving constraints to {output_path}...")
     output_dir = os.path.dirname(output_path)
-    if output_dir:
-        os.makedirs(output_dir, exist_ok=True)
+    if output_dir: os.makedirs(output_dir, exist_ok=True)
         
     with open(output_path, 'w') as f:
         json.dump(constraints, f, indent=2)
         
-    print(f"[INFO] Done. Found {len(allowed_transitions)} unique transitions.")
+    print(f"[INFO] Done. Found {len(all_transitions)} unique transitions.")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -165,10 +209,8 @@ if __name__ == "__main__":
     parser.add_argument("--output", required=True, help="Path to save constraints.json")
     parser.add_argument("--num_events", type=int, default=384, help="Vocabulary size of Event IDs")
     parser.add_argument("--num_cpus", type=int, default=4, help="Number of CPUs (for metadata)")
-    # limit the number of shards to process for speed?
+    parser.add_argument("--workers", type=int, default=None, help="Number of parallel workers (default: all cpus)")
     
     args = parser.parse_args()
     
-    learn_constraints(args.real_glob, args.num_events, args.num_cpus, args.output)
-
-# python data_processing/learn_constraints.py --real_glob "dataset/window_shards/windowed_npz_256/**/*.npz" --output dataset/constraints_universal.json --num_events 384 --num_cpus 4
+    learn_constraints(args.real_glob, args.num_events, args.num_cpus, args.output, args.workers)

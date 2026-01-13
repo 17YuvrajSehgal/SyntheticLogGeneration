@@ -39,7 +39,7 @@ python -u train_experiment.py \
     --d-model 512 \
     --nhead 8 \
     --num-layers 8 \
-    --batch-size 256 \
+    --batch-size 128 \
     --num-cpus 4\
     --tid-buckets 256\
     --fd-cap 1025 \

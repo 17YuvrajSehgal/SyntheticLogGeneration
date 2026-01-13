@@ -107,7 +107,8 @@ def main():
         benchmark=args.benchmark,
         batch_size=args.batch_size,
         num_workers=args.num_workers,
-        config=cfg
+        config=cfg,
+        prefetch_factor=4  # Prefetch 4 batches per worker for better GPU utilization
     )
     
     # 2. Setup Model

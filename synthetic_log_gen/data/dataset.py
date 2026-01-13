@@ -190,7 +190,8 @@ def make_dataloaders(
     pin_memory: bool = True,
     seed: int = 1234,
     config: SampleConfig = SampleConfig(),
-    cache_shards: int = 2
+    cache_shards: int = 2,
+    prefetch_factor: int = 2  # NEW: Number of batches to prefetch per worker
 ):
     """
     Creates DataLoaders for train/val/test splits.
@@ -225,15 +226,18 @@ def make_dataloaders(
     train_dl = DataLoader(
         train_ds, batch_size=batch_size, shuffle=True, 
         num_workers=num_workers, pin_memory=pin_memory, drop_last=True,
-        generator=g, persistent_workers=(num_workers > 0)
+        generator=g, persistent_workers=(num_workers > 0),
+        prefetch_factor=prefetch_factor if num_workers > 0 else None  # NEW
     )
     val_dl = DataLoader(
         val_ds, batch_size=batch_size, shuffle=False, 
-        num_workers=num_workers, pin_memory=pin_memory, drop_last=False
+        num_workers=num_workers, pin_memory=pin_memory, drop_last=False,
+        prefetch_factor=prefetch_factor if num_workers > 0 else None  # NEW
     )
     test_dl = DataLoader(
         test_ds, batch_size=batch_size, shuffle=False, 
-        num_workers=num_workers, pin_memory=pin_memory, drop_last=False
+        num_workers=num_workers, pin_memory=pin_memory, drop_last=False,
+        prefetch_factor=prefetch_factor if num_workers > 0 else None  # NEW
     )
     
     return train_dl, val_dl, test_dl

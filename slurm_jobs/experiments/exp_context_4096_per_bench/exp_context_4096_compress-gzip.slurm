@@ -48,7 +48,6 @@ python -u train_experiment.py \
     --lr 2e-4 \
     --max-steps-per-epoch 500 \
     --mixed-precision bf16 \
-    --compile \
     --log-dir "$EXPERIMENT_DIR" \
     --run-name "$RUN_NAME"
 

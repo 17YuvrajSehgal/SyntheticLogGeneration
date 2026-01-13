@@ -108,8 +108,8 @@ def main():
         batch_size=args.batch_size,
         num_workers=args.num_workers,
         config=cfg,
-        prefetch_factor=4,  # Prefetch 4 batches per worker for better GPU utilization
-        cache_shards=16  # Cache 16 shards in RAM to reduce disk I/O
+        prefetch_factor=4,
+        cache_shards=8  # 8 shards × 50MB = ~400MB cached (safe for 64GB RAM)
     )
     
     # 2. Setup Model

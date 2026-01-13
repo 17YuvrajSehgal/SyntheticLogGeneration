@@ -25,7 +25,7 @@ template = """#!/bin/bash
 #SBATCH --gpus-per-node=h100:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=64G
-#SBATCH --time=12:00:00
+#SBATCH --time=24:00:00
 #SBATCH --output=/project/def-naser2/yuvraj/SyntheticLogGeneration/experiments_results/{BENCHMARK}/exp_context_4096/exp_context_4096_{BENCHMARK}/slurm_%j.out
 #SBATCH --error=/project/def-naser2/yuvraj/SyntheticLogGeneration/experiments_results/{BENCHMARK}/exp_context_4096/exp_context_4096_{BENCHMARK}/slurm_%j.err
 

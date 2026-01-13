@@ -79,8 +79,9 @@ def main():
     
     # --- Optimization Setup (TF32) ---
     # Enable TF32 for Ampere/Hopper GPUs (significant speedup)
-    torch.backends.cuda.matmul.allow_tf32 = True
-    torch.backends.cudnn.allow_tf32 = True
+    # Using new PyTorch 2.9+ API to avoid deprecation warnings
+    torch.backends.cudnn.conv.fp32_precision = 'tf32'
+    torch.backends.cuda.matmul.fp32_precision = 'tf32'
     
     # Setup Logging
     if args.run_name is None:

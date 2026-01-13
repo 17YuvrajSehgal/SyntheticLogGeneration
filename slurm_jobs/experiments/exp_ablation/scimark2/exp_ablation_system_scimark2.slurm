@@ -1,12 +1,12 @@
 #!/bin/bash
-#SBATCH --job-name=exp_ablation_system
+#SBATCH --job-name=exp_ablation_system_scimark2
 #SBATCH --account=def-naser2
 #SBATCH --gpus-per-node=h100:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=64G
 #SBATCH --time=48:00:00
-#SBATCH --output=/project/def-naser2/yuvraj/SyntheticLogGeneration/experiments_results/exp_ablation_system/slurm_%j.out
-#SBATCH --error=/project/def-naser2/yuvraj/SyntheticLogGeneration/experiments_results/exp_ablation_system/slurm_%j.err
+#SBATCH --output=/project/def-naser2/yuvraj/SyntheticLogGeneration/experiments_results/exp_ablation_system_scimark2/slurm_%j.out
+#SBATCH --error=/project/def-naser2/yuvraj/SyntheticLogGeneration/experiments_results/exp_ablation_system_scimark2/slurm_%j.err
 
 set -euo pipefail
 
@@ -19,16 +19,16 @@ source "$REPO/.venv/bin/activate"
 export PYTHONUNBUFFERED=1
 
 # Ensure specific experiment dir exists
-EXPERIMENT_DIR="$REPO/experiments_results/exp_ablation_system"
+EXPERIMENT_DIR="$REPO/experiments_results/exp_ablation_system_scimark2"
 mkdir -p "$EXPERIMENT_DIR"
 
-echo "[START] Experiment: exp_ablation_system"
+echo "[START] Experiment: exp_ablation_system_scimark2"
 echo "Date: $(date)"
 echo "Output Directory: $EXPERIMENT_DIR"
 
 # Note: train_experiment.py joins log-dir and run-name.
-# So --log-dir experiments_results --run-name exp_ablation_system 
-# results in experiments_results/exp_ablation_system
+# So --log-dir experiments_results --run-name exp_ablation_system_scimark2
+# results in experiments_results/exp_ablation_system_scimark2
 
 python -u train_experiment.py \
     --data-root "$SCRATCH/windowed_npz_1024" \
@@ -47,7 +47,7 @@ python -u train_experiment.py \
     --steps 1000 \
     --lr 2e-4 \
     --mixed-precision bf16 \
-    --log-dir experiments_results \
-    --run-name exp_ablation_system
+    --log-dir experiments_results_scimark2 \
+    --run-name exp_ablation_system_scimark2
 
-echo "[DONE] Finished exp_ablation_system"
+echo "[DONE] Finished exp_ablation_system_scimark2"

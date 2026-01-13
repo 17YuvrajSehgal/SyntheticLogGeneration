@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=unpack-linux_exp_context_256
 #SBATCH --account=def-naser2
-#SBATCH --gpus-per-node=1
+#SBATCH --gpus-per-node=h100:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=64G
 #SBATCH --time=48:00:00
@@ -40,12 +40,14 @@ python -u train_experiment.py \
     --nhead 8 \
     --num-layers 8 \
     --batch-size 256 \
+    --num-workers 8 \
     --num-cpus 4 \
     --tid-buckets 256 \
     --fd-cap 1025 \
-    --epochs 100 \
+    --epochs 20 \
     --steps 1000 \
     --lr 2e-4 \
+    --max-steps-per-epoch 500 \
     --mixed-precision bf16 \
     --log-dir "$EXPERIMENT_DIR" \
     --run-name "$RUN_NAME"

@@ -60,10 +60,11 @@ python -u train_experiment.py \\
     --nhead 8 \\
     --num-layers 8 \\
     --batch-size 32 \\
+    --num-workers 8 \\
     --num-cpus 4 \\
     --tid-buckets 256 \\
     --fd-cap 1025 \\
-    --epochs 100 \\
+    --epochs 20 \\
     --steps 1000 \\
     --lr 2e-4 \\
     --max-steps-per-epoch 500 \\

@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=unpack-linux_exp_context_256
 #SBATCH --account=def-naser2
-#SBATCH --gpus-per-node=h100:1
+#SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=64G
 #SBATCH --time=48:00:00

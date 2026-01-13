@@ -133,18 +133,22 @@ class LogDiffusionModel(nn.Module):
         
         # Compute Cross Entropy / MSE for features
         recon_loss = 0.0
+        recon_loss_per_channel = {}
         
         for key, target in inputs.items():
             if key == "dt":
                 # MSE for continuous
                 pred = logits[key]
-                recon_loss += F.mse_loss(pred, target.float())
+                channel_loss = F.mse_loss(pred, target.float())
             else:
                 # Cross Entropy for discrete
                 # logits: [B, L, Vocab], target: [B, L]
                 pred = logits[key].view(-1, logits[key].shape[-1])
                 tgt = target.view(-1)
-                recon_loss += F.cross_entropy(pred, tgt)
+                channel_loss = F.cross_entropy(pred, tgt)
+            
+            recon_loss += channel_loss
+            recon_loss_per_channel[key] = channel_loss.detach()
                 
         # Total Loss = Latent + Lambda * Recon
         # Using simple addition for now.
@@ -152,7 +156,8 @@ class LogDiffusionModel(nn.Module):
         
         return total_loss, {
             "latent_loss": latent_loss.detach(),
-            "recon_loss": recon_loss.detach()
+            "recon_loss": recon_loss.detach(),
+            "recon_loss_per_channel": recon_loss_per_channel
         }
     
     @torch.no_grad()

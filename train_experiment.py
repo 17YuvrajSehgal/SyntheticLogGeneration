@@ -156,6 +156,10 @@ def main():
     global_step = 0
     print(f"[Train] Starting {args.epochs} epochs on {device}...")
     
+    # Track epoch-level statistics
+    epoch_loss_sum = 0.0
+    epoch_loss_count = 0
+    
     for epoch in range(args.epochs):
         model.train()
         epoch_steps = 0
@@ -184,23 +188,120 @@ def main():
 
             # Backward with Scaler
             scaler.scale(loss).backward()
+            
+            # Compute gradient norm (before optimizer step)
+            total_norm = 0.0
+            for p in model.parameters():
+                if p.grad is not None:
+                    param_norm = p.grad.data.norm(2)
+                    total_norm += param_norm.item() ** 2
+            total_norm = total_norm ** 0.5
+            
             scaler.step(optimizer)
             scaler.update()
             
+            # Track epoch statistics
+            epoch_loss_sum += loss.item()
+            epoch_loss_count += 1
+            
             # Logging
             if i % 10 == 0:
+                # Basic losses
                 writer.add_scalar("Train/Loss", loss.item(), global_step)
-                for k, v in metrics.items():
-                    val = v.item() if isinstance(v, torch.Tensor) else v
-                    writer.add_scalar(f"Train/{k}", val, global_step)
+                writer.add_scalar("Train/GradientNorm", total_norm, global_step)
+                writer.add_scalar("Train/LearningRate", optimizer.param_groups[0]['lr'], global_step)
                 
-                print(f"Epoch {epoch} | Step {global_step} | Loss: {loss.item():.4f}", end="\r")
+                # Metrics (latent_loss, recon_loss)
+                for k, v in metrics.items():
+                    if k == "recon_loss_per_channel":
+                        # Log per-channel reconstruction losses
+                        for channel, channel_loss in v.items():
+                            val = channel_loss.item() if isinstance(channel_loss, torch.Tensor) else channel_loss
+                            writer.add_scalar(f"Train/Recon_{channel}", val, global_step)
+                    else:
+                        val = v.item() if isinstance(v, torch.Tensor) else v
+                        writer.add_scalar(f"Train/{k}", val, global_step)
+                
+                print(f"Epoch {epoch} | Step {global_step} | Loss: {loss.item():.4f} | GradNorm: {total_norm:.4f}", end="\r")
             
             global_step += 1
             epoch_steps += 1
             
-        # Validation Loop (Optional: Implement sampling here)
-        print(f"\n[Epoch {epoch}] Completed.")
+        # Epoch-level statistics
+        avg_epoch_loss = epoch_loss_sum / epoch_loss_count if epoch_loss_count > 0 else 0.0
+        writer.add_scalar("Epoch/AvgTrainLoss", avg_epoch_loss, epoch)
+        writer.add_scalar("Epoch/StepsCompleted", epoch_steps, epoch)
+        epoch_loss_sum = 0.0
+        epoch_loss_count = 0
+        
+        # Validation Loop
+        print(f"\n[Epoch {epoch}] Running validation...")
+        model.eval()
+        val_loss = 0.0
+        val_latent_loss = 0.0
+        val_recon_loss = 0.0
+        val_steps = 0
+        
+        with torch.no_grad():
+            for val_batch in val_dl:
+                val_batch = {k: v.to(device) for k, v in val_batch.items()}
+                
+                with torch.amp.autocast(device_type=device.type if device.type != 'cpu' else 'cuda', dtype=mp_dtype, enabled=use_amp):
+                    if args.model_type == "diffusion":
+                        v_loss, v_metrics = model(val_batch)
+                        if isinstance(v_loss, torch.Tensor) and v_loss.ndim > 0:
+                            v_loss = v_loss.mean()
+                            v_metrics = {k: v.mean() if isinstance(v, torch.Tensor) else v for k, v in v_metrics.items()}
+                        
+                        val_loss += v_loss.item()
+                        val_latent_loss += v_metrics['latent_loss'].item()
+                        val_recon_loss += v_metrics['recon_loss'].item()
+                
+                val_steps += 1
+                if val_steps >= 50:  # Limit validation to 50 batches for speed
+                    break
+        
+        # Log validation metrics
+        if val_steps > 0:
+            writer.add_scalar("Val/Loss", val_loss / val_steps, epoch)
+            writer.add_scalar("Val/LatentLoss", val_latent_loss / val_steps, epoch)
+            writer.add_scalar("Val/ReconLoss", val_recon_loss / val_steps, epoch)
+            print(f"[Validation] Loss: {val_loss / val_steps:.4f}")
+        
+        # Log parameter histograms every 10 epochs
+        if epoch % 10 == 0:
+            raw_model_for_hist = model
+            if hasattr(raw_model_for_hist, "module"):
+                raw_model_for_hist = raw_model_for_hist.module
+            if hasattr(raw_model_for_hist, "_orig_mod"):
+                raw_model_for_hist = raw_model_for_hist._orig_mod
+            
+            for name, param in raw_model_for_hist.named_parameters():
+                if param.requires_grad:
+                    writer.add_histogram(f"Params/{name}", param.data, epoch)
+                    if param.grad is not None:
+                        writer.add_histogram(f"Gradients/{name}", param.grad.data, epoch)
+        
+        # Generate samples every 10 epochs (after epoch 0)
+        if epoch % 10 == 0 and epoch > 0:
+            print(f"[Epoch {epoch}] Generating samples...")
+            raw_model_for_sample = model
+            if hasattr(raw_model_for_sample, "module"):
+                raw_model_for_sample = raw_model_for_sample.module
+            if hasattr(raw_model_for_sample, "_orig_mod"):
+                raw_model_for_sample = raw_model_for_sample._orig_mod
+            
+            with torch.no_grad():
+                samples = raw_model_for_sample.sample(batch_size=4, seq_len=args.seq_len, device=device)
+                
+                # Log sample statistics
+                for channel, data in samples.items():
+                    if channel != 'dt':  # Discrete channels
+                        # Flatten and create histogram of values
+                        flat_data = data.flatten().cpu()
+                        writer.add_histogram(f"Samples/{channel}_distribution", flat_data.float(), epoch)
+        
+        print(f"[Epoch {epoch}] Completed.")
         
         # Save checkpoint (Unwrap from compile/DataParallel)
         raw_model = model

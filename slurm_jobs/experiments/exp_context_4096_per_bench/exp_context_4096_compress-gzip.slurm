@@ -39,6 +39,7 @@ python -u train_experiment.py \
     --nhead 8 \
     --num-layers 8 \
     --batch-size 32 \
+    --num-workers 8 \
     --num-cpus 4 \
     --tid-buckets 256 \
     --fd-cap 1025 \
@@ -47,6 +48,7 @@ python -u train_experiment.py \
     --lr 2e-4 \
     --max-steps-per-epoch 500 \
     --mixed-precision bf16 \
+    --compile \
     --log-dir "$EXPERIMENT_DIR" \
     --run-name "$RUN_NAME"
 

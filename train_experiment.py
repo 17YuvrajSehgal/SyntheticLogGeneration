@@ -67,6 +67,7 @@ def main():
     # Optimization Args (H100)
     parser.add_argument("--lr", type=float, default=2e-4)
     parser.add_argument("--epochs", type=int, default=100)
+    parser.add_argument("--max-steps-per-epoch", type=int, default=None, help="Limit steps per epoch (useful for large datasets)")
     parser.add_argument("--mixed-precision", default="no", choices=["no", "fp16", "bf16"], help="Use mixed precision (bf16 for H100)")
     parser.add_argument("--compile", action="store_true", help="Use torch.compile() (PyTorch 2.0)")
     
@@ -157,7 +158,13 @@ def main():
     
     for epoch in range(args.epochs):
         model.train()
+        epoch_steps = 0
         for i, batch in enumerate(train_dl):
+            # Check if we've reached max steps for this epoch
+            if args.max_steps_per_epoch is not None and epoch_steps >= args.max_steps_per_epoch:
+                print(f"\n[INFO] Reached max steps per epoch ({args.max_steps_per_epoch}). Ending epoch {epoch} early.")
+                break
+            
             # Move batch to device
             batch = {k: v.to(device) for k, v in batch.items()}
             
@@ -190,6 +197,7 @@ def main():
                 print(f"Epoch {epoch} | Step {global_step} | Loss: {loss.item():.4f}", end="\r")
             
             global_step += 1
+            epoch_steps += 1
             
         # Validation Loop (Optional: Implement sampling here)
         print(f"\n[Epoch {epoch}] Completed.")

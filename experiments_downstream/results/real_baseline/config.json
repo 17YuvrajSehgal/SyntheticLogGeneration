@@ -1,0 +1,19 @@
+{
+  "train_data": "experiments_downstream/data/real_train.npz",
+  "test_data": "experiments_downstream/data/real_test.npz",
+  "vocab_dir": "dataset/metadata_all_events",
+  "model_type": "full",
+  "d_model": 256,
+  "nhead": 8,
+  "num_layers": 4,
+  "dropout": 0.1,
+  "seq_len": 128,
+  "stride": 64,
+  "batch_size": 64,
+  "epochs": 20,
+  "lr": 0.0001,
+  "patience": 3,
+  "run_name": "real_baseline",
+  "output_dir": "experiments_downstream/results",
+  "device": "cpu"
+}

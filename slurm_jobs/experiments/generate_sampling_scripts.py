@@ -3,6 +3,7 @@
 Generate Slurm scripts for sampling synthetic traces from trained diffusion models.
 
 This script creates Slurm job files for all benchmarks and context lengths.
+The generated scripts automatically find the checkpoint with the highest epoch number.
 """
 
 import os
@@ -28,7 +29,7 @@ CONTEXTS = {
         "num_layers": 8,
         "seq_len": 256,
         "num_samples": 1000,
-        "batch_size": 64,
+        "batch_size": 32,
         "time": "04:00:00"
     },
     "1024": {
@@ -46,7 +47,7 @@ CONTEXTS = {
         "num_layers": 8,
         "seq_len": 4096,
         "num_samples": 1000,
-        "batch_size": 16,
+        "batch_size": 32,
         "time": "04:00:00"
     }
 }
@@ -55,7 +56,7 @@ CONTEXTS = {
 REPO_PATH = "/project/def-naser2/yuvraj/SyntheticLogGeneration"
 OUTPUT_DIR = "sample_experiments"
 
-# Template for Slurm script
+# Template for Slurm script with automatic checkpoint detection
 SLURM_TEMPLATE = """#!/bin/bash
 #SBATCH --job-name=sample_{context}_{benchmark}
 #SBATCH --account=def-naser2
@@ -78,35 +79,51 @@ source "$REPO/.venv/bin/activate"
 echo "[START] Generating samples for {benchmark} (context={context})"
 echo "Date: $(date)"
 
-# Checkpoint path
-CKPT="experiments_results/{benchmark}/exp_context_{context}/exp_context_{context}_{benchmark}/ckpt_epoch_19.pt"
+# Find the latest checkpoint (highest epoch number)
+CKPT_DIR="experiments_results/{benchmark}/exp_context_{context}/exp_context_{context}_{benchmark}"
 OUT="generated_traces/context_{context}/{benchmark}_samples.npz"
 
 # Create output directory
 mkdir -p "generated_traces/context_{context}"
 
-# Check if checkpoint exists
-if [ ! -f "$CKPT" ]; then
-    echo "[ERROR] Checkpoint not found: $CKPT"
-    echo "[INFO] Looking for alternative checkpoints..."
-    # Try to find the latest checkpoint
-    CKPT_DIR="experiments_results/{benchmark}/exp_context_{context}/exp_context_{context}_{benchmark}"
-    if [ -d "$CKPT_DIR" ]; then
-        LATEST=$(ls -t "$CKPT_DIR"/ckpt_epoch_*.pt 2>/dev/null | head -n 1)
-        if [ -n "$LATEST" ]; then
-            echo "[INFO] Using latest checkpoint: $LATEST"
-            CKPT="$LATEST"
-        else
-            echo "[ERROR] No checkpoints found in $CKPT_DIR"
-            exit 1
-        fi
-    else
-        echo "[ERROR] Checkpoint directory not found: $CKPT_DIR"
-        exit 1
-    fi
+# Check if checkpoint directory exists
+if [ ! -d "$CKPT_DIR" ]; then
+    echo "[ERROR] Checkpoint directory not found: $CKPT_DIR"
+    exit 1
 fi
 
-echo "[INFO] Using checkpoint: $CKPT"
+# Find all checkpoint files and extract epoch numbers
+echo "[INFO] Searching for checkpoints in: $CKPT_DIR"
+CKPT_FILES=("$CKPT_DIR"/ckpt_epoch_*.pt)
+
+if [ ! -e "${{CKPT_FILES[0]}}" ]; then
+    echo "[ERROR] No checkpoint files found in $CKPT_DIR"
+    exit 1
+fi
+
+# Find checkpoint with highest epoch number
+MAX_EPOCH=-1
+BEST_CKPT=""
+
+for ckpt_file in "${{CKPT_FILES[@]}}"; do
+    # Extract epoch number from filename (e.g., ckpt_epoch_19.pt -> 19)
+    filename=$(basename "$ckpt_file")
+    epoch_num=$(echo "$filename" | sed -n 's/ckpt_epoch_\\([0-9]*\\)\\.pt/\\1/p')
+    
+    if [ -n "$epoch_num" ] && [ "$epoch_num" -gt "$MAX_EPOCH" ]; then
+        MAX_EPOCH=$epoch_num
+        BEST_CKPT="$ckpt_file"
+    fi
+done
+
+if [ -z "$BEST_CKPT" ]; then
+    echo "[ERROR] Could not find valid checkpoint files"
+    exit 1
+fi
+
+CKPT="$BEST_CKPT"
+echo "[INFO] Found ${{#CKPT_FILES[@]}} checkpoint(s)"
+echo "[INFO] Using checkpoint with highest epoch: $CKPT (epoch $MAX_EPOCH)"
 echo "[INFO] Output: $OUT"
 
 python -u sample_diffusion.py \\
@@ -210,6 +227,10 @@ def main():
     print(f"✓ Successfully generated {len(generated_files)} Slurm scripts")
     print(f"✓ Submission script: {submit_script}")
     print(f"{'=' * 60}")
+    print("\nKey Features:")
+    print("  • Automatically finds checkpoint with highest epoch number")
+    print("  • Handles missing checkpoints gracefully")
+    print("  • Optimized batch sizes for each context length")
     print("\nTo submit all jobs:")
     print(f"  cd {OUTPUT_DIR}")
     print(f"  ./submit_all_sampling_jobs.sh")

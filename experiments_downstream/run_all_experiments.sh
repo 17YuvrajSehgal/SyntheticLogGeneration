@@ -10,7 +10,8 @@ echo "========================================"
 
 # Configuration
 BENCHMARK="scimark2"
-REAL_DATA_GLOB="dataset/window_shards/${BENCHMARK}/train/*.npz"
+CONTEXT_LEN="1024"  # Use 1024 as the baseline context length for real data
+REAL_DATA_GLOB="dataset/window_shards/windowed_npz_${CONTEXT_LEN}/${BENCHMARK}/train/*.npz"
 CONSTRAINTS="dataset/constraints_universal.json"
 OUTPUT_DIR="experiments_downstream"
 
@@ -35,7 +36,7 @@ echo "PHASE 1: Data Preparation"
 echo "========================================"
 
 python experiments_downstream/prepare_data.py \
-    --real-glob "$REAL_DATA_GLOB" \
+    --real-glob "${REAL_DATA_GLOB}" \
     --benchmark "$BENCHMARK" \
     --generate-synthetic \
     --checkpoint-256 "$CKPT_256" \

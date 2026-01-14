@@ -4,7 +4,7 @@
 #SBATCH --gpus-per-node=h100:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=64G
-#SBATCH --time=24:00:00
+#SBATCH --time=8:00:00
 #SBATCH --output=/project/def-naser2/yuvraj/SyntheticLogGeneration/experiments_downstream/logs/slurm_%j.out
 #SBATCH --error=/project/def-naser2/yuvraj/SyntheticLogGeneration/experiments_downstream/logs/slurm_%j.err
 

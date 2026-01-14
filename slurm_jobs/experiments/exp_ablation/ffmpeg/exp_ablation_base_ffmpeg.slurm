@@ -4,7 +4,7 @@
 #SBATCH --gpus-per-node=h100:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=64G
-#SBATCH --time=24:00:00
+#SBATCH --time=3:00:00
 #SBATCH --output=/project/def-naser2/yuvraj/SyntheticLogGeneration/experiments_results/exp_ablation_base_ffmpeg/slurm_%j.out
 #SBATCH --error=/project/def-naser2/yuvraj/SyntheticLogGeneration/experiments_results/exp_ablation_base_ffmpeg/slurm_%j.err
 
@@ -49,7 +49,7 @@ python -u train_experiment.py \
     --lr 2e-4 \
     --max-steps-per-epoch 500 \
     --mixed-precision bf16 \
-    --log-dir experiments_results_ffmpeg \
+    --log-dir experiments_results \
     --run-name exp_ablation_base_ffmpeg
 
 echo "[DONE] Finished exp_ablation_base"

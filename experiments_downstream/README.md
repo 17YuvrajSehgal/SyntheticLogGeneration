@@ -136,9 +136,15 @@ This will:
 
 #### Step 1: Prepare Data
 
+**IMPORTANT**: Run this from the repository root (`SyntheticLogGeneration/`), not from `experiments_downstream/`
+
 ```bash
+# Make sure you're in the repo root
+cd c:/workplace/SyntheticLogGeneration
+
+# Run data preparation
 python experiments_downstream/prepare_data.py \
-    --real-glob "dataset/window_shards/scimark2/train/*.npz" \
+    --real-glob "dataset/window_shards/windowed_npz_1024/scimark2/train/*.npz" \
     --benchmark scimark2 \
     --generate-synthetic \
     --checkpoint-256 experiments_results/exp_context_256/ckpt_epoch_99.pt \
@@ -150,13 +156,15 @@ python experiments_downstream/prepare_data.py \
 ```
 
 **Output**: 
-- `data/real_train.npz`, `data/real_test.npz`
-- `data/synthetic_raw_*.npz`, `data/synthetic_repaired_*.npz`
-- `data/combined_real_synthetic_*.npz`
+- `experiments_downstream/data/real_train.npz`, `experiments_downstream/data/real_test.npz`
+- `experiments_downstream/data/synthetic_raw_*.npz`, `experiments_downstream/data/synthetic_repaired_*.npz`
+- `experiments_downstream/data/combined_real_synthetic_*.npz`
 
 ---
 
 #### Step 2: Train Downstream Models
+
+**IMPORTANT**: Run from repository root
 
 **Baseline (Real data only)**:
 ```bash

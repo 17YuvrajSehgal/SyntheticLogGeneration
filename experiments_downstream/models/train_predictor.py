@@ -16,7 +16,7 @@ from tqdm import tqdm
 from sklearn.metrics import f1_score, accuracy_score, classification_report
 import sys
 
-from experiments_downstream.models.next_event_predictor import NextEventPredictor, NextEventPredictorEventOnly
+from next_event_predictor import NextEventPredictor, NextEventPredictorEventOnly
 
 # Add parent directory to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

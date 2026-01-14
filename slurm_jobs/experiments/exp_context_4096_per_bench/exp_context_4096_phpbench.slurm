@@ -1,10 +1,10 @@
 #!/bin/bash
 #SBATCH --job-name=phpbench_exp_context_4096
 #SBATCH --account=def-naser2
-#SBATCH --gpus-per-node=h100:1
+#SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=64G
-#SBATCH --time=15:00:00
+#SBATCH --time=20:00:00
 #SBATCH --output=/project/def-naser2/yuvraj/SyntheticLogGeneration/experiments_results/phpbench/exp_context_4096/exp_context_4096_phpbench/slurm_%j.out
 #SBATCH --error=/project/def-naser2/yuvraj/SyntheticLogGeneration/experiments_results/phpbench/exp_context_4096/exp_context_4096_phpbench/slurm_%j.err
 

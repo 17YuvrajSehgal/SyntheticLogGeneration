@@ -351,7 +351,7 @@ def main():
         json.dump(history, f, indent=2)
     
     # Load best model and evaluate
-    checkpoint = torch.load(os.path.join(run_dir, 'best_model.pt'))
+    checkpoint = torch.load(os.path.join(run_dir, 'best_model.pt'), weights_only=False)
     model.load_state_dict(checkpoint['model_state_dict'])
     
     final_metrics, final_preds, final_targets = evaluate(

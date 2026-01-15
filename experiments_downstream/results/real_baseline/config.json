@@ -1,6 +1,6 @@
 {
-  "train_data": "experiments_downstream/data/real_train.npz",
-  "test_data": "experiments_downstream/data/real_test.npz",
+  "train_data": "/scratch/yuvraj17/SyntheticLogGeneration_runs/202700/experiments_downstream/data/real_train.npz",
+  "test_data": "/scratch/yuvraj17/SyntheticLogGeneration_runs/202700/experiments_downstream/data/real_test.npz",
   "vocab_dir": "dataset/metadata_all_events",
   "model_type": "full",
   "d_model": 256,
@@ -15,5 +15,5 @@
   "patience": 3,
   "run_name": "real_baseline",
   "output_dir": "experiments_downstream/results",
-  "device": "cpu"
+  "device": "cuda"
 }

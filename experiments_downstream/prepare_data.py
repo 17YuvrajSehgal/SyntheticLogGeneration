@@ -206,9 +206,9 @@ def main():
         print("="*60)
         
         checkpoints = {
-            '4096': args.checkpoint_4096,
             '256': args.checkpoint_256,
             '1024': args.checkpoint_1024,
+            '4096': args.checkpoint_4096,
         }
         
         synthetic_files = {}

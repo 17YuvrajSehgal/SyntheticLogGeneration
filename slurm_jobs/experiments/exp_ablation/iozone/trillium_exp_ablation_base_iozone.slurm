@@ -1,0 +1,107 @@
+#!/bin/bash
+#SBATCH --job-name=exp_ablation_base_iozone
+#SBATCH --account=def-naser2
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --gpus-per-node=1
+#SBATCH --cpus-per-task=8
+#SBATCH --time=16:00:00
+#SBATCH --output=/scratch/%u/slurm_%x_%j.out
+#SBATCH --error=/scratch/%u/slurm_%x_%j.err
+
+set -euo pipefail
+
+module --force purge
+module load StdEnv/2023 python/3.11 cuda/12.2
+
+# ============================================================
+# TRILLIUM ASSUMPTION:
+# Repo is cloned into:  $SCRATCH/SyntheticLogGeneration
+# Venv exists at:       $SCRATCH/SyntheticLogGeneration/.venv
+# ============================================================
+
+REPO="$SCRATCH/SyntheticLogGeneration"
+cd "$REPO"
+
+source "$REPO/.venv/bin/activate"
+export PYTHONUNBUFFERED=1
+
+RUN_NAME="exp_ablation_base_iozone"
+BENCHMARK="iozone"
+CONTEXT_LEN="1024"
+
+# Per-job scratch run dir
+RUN_DIR="$SCRATCH/SyntheticLogGeneration_runs/${SLURM_JOB_ID}"
+mkdir -p "$RUN_DIR"
+
+# Put outputs under per-job dir (Trillium style)
+OUTPUT_DIR="$RUN_DIR/experiments_results"
+EXPERIMENT_DIR="$OUTPUT_DIR/$RUN_NAME"
+mkdir -p "$EXPERIMENT_DIR"
+
+echo "========================================"
+echo "[START] Experiment: $RUN_NAME"
+echo "========================================"
+echo "Job ID: $SLURM_JOB_ID"
+echo "Node: $SLURM_NODELIST"
+echo "Date: $(date)"
+echo "Repo: $REPO"
+echo "Run Dir: $RUN_DIR"
+echo "Benchmark: $BENCHMARK"
+echo "Seq Len: $CONTEXT_LEN"
+echo "Output Directory: $EXPERIMENT_DIR"
+echo ""
+
+# Input data expected on TRILLIUM scratch
+DATA_ROOT="$SCRATCH/windowed_npz_${CONTEXT_LEN}"
+REAL_GLOB="$DATA_ROOT/$BENCHMARK/train/*.npz"
+
+# Fail fast if inputs are missing
+shopt -s nullglob
+files=( $REAL_GLOB )
+if [ ${#files[@]} -eq 0 ]; then
+  echo "ERROR: No files matched:"
+  echo "  $REAL_GLOB"
+  echo "Did you copy windowed_npz_${CONTEXT_LEN} to Trillium \$SCRATCH?"
+  exit 1
+fi
+shopt -u nullglob
+
+# IMPORTANT:
+# train_experiment.py writes to:  <log-dir>/<run-name>
+# We want: EXPERIMENT_DIR directly, so set log-dir=OUTPUT_DIR and run-name=RUN_NAME
+python -u train_experiment.py \
+    --data-root "$DATA_ROOT" \
+    --benchmark "$BENCHMARK" \
+    --seq-len 1024 \
+    --channels event dt \
+    --model-type diffusion \
+    --d-model 512 \
+    --nhead 8 \
+    --num-layers 8 \
+    --batch-size 128 \
+    --num-workers 8 \
+    --num-cpus 4 \
+    --tid-buckets 256 \
+    --fd-cap 1025 \
+    --epochs 20 \
+    --steps 1000 \
+    --lr 2e-4 \
+    --max-steps-per-epoch 500 \
+    --mixed-precision bf16 \
+    --log-dir "$OUTPUT_DIR" \
+    --run-name "$RUN_NAME"
+
+echo ""
+echo "[DONE] Finished $RUN_NAME at $(date)"
+echo ""
+
+# Persist results to HOME (scratch can be purged)
+FINAL_OUT="$HOME/SyntheticLogGeneration_results_${SLURM_JOB_ID}"
+mkdir -p "$FINAL_OUT"
+rsync -a "$OUTPUT_DIR/" "$FINAL_OUT/"
+
+echo "Copied results to:"
+echo "  - $FINAL_OUT"
+echo ""
+echo "[DONE] Job completed successfully"

@@ -77,7 +77,7 @@ python -u train_experiment.py \
     --d-model 512 \
     --nhead 8 \
     --num-layers 8 \
-    --batch-size 32 \
+    --batch-size 256 \
     --num-workers 8 \
     --num-cpus 4 \
     --tid-buckets 256 \

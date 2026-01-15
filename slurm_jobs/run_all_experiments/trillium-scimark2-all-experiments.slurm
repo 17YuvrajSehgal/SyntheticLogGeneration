@@ -60,9 +60,9 @@ REAL_DATA_GLOB="$SCRATCH/windowed_npz_${CONTEXT_LEN}/${BENCHMARK}/train/*.npz"
 
 # These paths are relative to $REPO
 CONSTRAINTS="$REPO/dataset/constraints_universal.json"
-CKPT_256="$REPO/experiments_results/exp_context_256/ckpt_epoch_99.pt"
-CKPT_1024="$REPO/experiments_results/exp_context_1024/ckpt_epoch_99.pt"
-CKPT_4096="$REPO/experiments_results/exp_context_4096/ckpt_epoch_99.pt"
+CKPT_256="$REPO/experiments_results/$BENCHMARK/exp_context_256/exp_context_256_scimark2/exp_context_256_scimark2/ckpt_epoch_19.pt"
+CKPT_1024="$REPO/experiments_results/$BENCHMARK/exp_context_1024/exp_context_1024_scimark2/exp_context_1024_scimark2/ckpt_epoch_19.pt"
+CKPT_4096="$REPO/experiments_results/$BENCHMARK/exp_context_4096/exp_context_4096_scimark2/exp_context_4096_scimark2/ckpt_epoch_19.pt"
 
 echo "Configuration:"
 echo "  Benchmark: $BENCHMARK"

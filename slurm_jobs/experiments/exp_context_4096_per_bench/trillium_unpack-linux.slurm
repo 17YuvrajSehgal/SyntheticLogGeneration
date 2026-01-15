@@ -5,7 +5,6 @@
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=8
-#SBATCH --mem=64G
 #SBATCH --time=13:00:00
 #SBATCH --output=/scratch/%u/slurm_%x_%j.out
 #SBATCH --error=/scratch/%u/slurm_%x_%j.err

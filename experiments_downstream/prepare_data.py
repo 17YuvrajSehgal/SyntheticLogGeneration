@@ -71,13 +71,26 @@ def generate_synthetic(checkpoint, output_path, num_samples=10000, seq_len=1024)
     print(f"\n[Generate] Generating {num_samples} synthetic samples...")
     print(f"[Generate] Checkpoint: {checkpoint}")
     
+    # Optimized batch sizes for maximum speed on H100 GPU (80GB)
+    # Larger batches for shorter sequences = faster generation
+    if seq_len <= 256:
+        batch_size = 64  # Very fast for short sequences
+    elif seq_len <= 1024:
+        batch_size = 32  # Optimal for medium sequences
+    elif seq_len <= 2048:
+        batch_size = 16  # Good balance
+    else:  # 4096
+        batch_size = 8   # Necessary for long sequences
+    
+    print(f"[Generate] Using optimized batch size: {batch_size} for seq_len={seq_len}")
+    
     cmd = [
         'python', 'sample_diffusion.py',
         '--ckpt', checkpoint,
         '--out', output_path,
         '--num-samples', str(num_samples),
         '--seq-len', str(seq_len),
-        '--batch-size', '32',
+        '--batch-size', str(batch_size),
     ]
     
     print(f"[CMD] {' '.join(cmd)}")

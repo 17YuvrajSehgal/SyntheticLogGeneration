@@ -5,7 +5,7 @@
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=8
-#SBATCH --time=06:00:00
+#SBATCH --time=02:00:00
 #SBATCH --output=/scratch/%u/pipeline_pybench_4096_%j.out
 #SBATCH --error=/scratch/%u/pipeline_pybench_4096_%j.err
 

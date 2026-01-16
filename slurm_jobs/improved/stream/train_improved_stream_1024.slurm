@@ -4,6 +4,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=1
+#SBATCH --cpus-per-task=4
 #SBATCH --time=8:00:00
 #SBATCH --mem=32G
 #SBATCH --output=/scratch/%u/improved_baseline_stream_1024_%j.out
@@ -61,6 +62,7 @@ python -u train_experiment_better.py \
     --seq-len $CONTEXT_LEN \
     --batch-size $BATCH_SIZE \
     --epochs $EPOCHS \
+    --num-workers 4 \
     --d-model 256 \
     --nhead 4 \
     --num-layers 4 \

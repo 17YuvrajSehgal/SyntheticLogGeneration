@@ -4,7 +4,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=1
-#SBATCH --cpus-per-task=8
+#SBATCH --cpus-per-task=4
 #SBATCH --time=20:00:00
 #SBATCH --mem=32G
 #SBATCH --output=/scratch/%u/improved_baseline_stream_256_%j.out

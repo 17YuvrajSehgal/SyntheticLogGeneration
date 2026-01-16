@@ -3,10 +3,9 @@
 #SBATCH --account=def-naser2
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --gpus-per-node=h100:1
-# SBATCH --cpus-per-task=4
+#SBATCH --gpus-per-node=1
+#SBATCH --cpus-per-task=8
 #SBATCH --time=20:00:00
-#SBATCH --mem=32G
 #SBATCH --output=/scratch/%u/improved_baseline_stream_256_%j.out
 #SBATCH --error=/scratch/%u/improved_baseline_stream_256_%j.err
 
@@ -26,13 +25,12 @@ echo "============================================================"
 nvidia-smi
 
 # Activate virtual environment
-REPO="/project/def-naser2/yuvraj/SyntheticLogGeneration"
-cd "$REPO"
-source "$REPO/.venv/bin/activate"
-export PYTHONUNBUFFERED=1
+cd $SCRATCH/SyntheticLogGeneration
+source .venv/bin/activate
 
 # Set environment variables
 export SCRATCH=$SCRATCH
+export PYTHONUNBUFFERED=1
 
 # Training configuration
 BENCHMARK="stream"

@@ -5,7 +5,7 @@
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=8
-#SBATCH --time=6:00:00
+#SBATCH --time=8:00:00
 #SBATCH --output=/scratch/%u/improved_baseline_stream_1024_%j.out
 #SBATCH --error=/scratch/%u/improved_baseline_stream_1024_%j.err
 

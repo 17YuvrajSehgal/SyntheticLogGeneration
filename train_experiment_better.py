@@ -189,6 +189,23 @@ def main():
     use_amp = args.mixed_precision != "no"
     scaler = torch.amp.GradScaler(enabled=(args.mixed_precision == "fp16"))
     
+    # Calculate training statistics
+    steps_per_epoch = len(train_dl)
+    total_steps = steps_per_epoch * args.epochs
+    
+    print(f"\n{'='*60}")
+    print("Training Progress Estimation")
+    print(f"{'='*60}")
+    print(f"Training samples: {len(train_dl.dataset):,}")
+    print(f"Batch size: {args.batch_size}")
+    print(f"Steps per epoch: {steps_per_epoch:,}")
+    print(f"Total epochs: {args.epochs}")
+    print(f"Total steps: {total_steps:,}")
+    print(f"\nEstimated time per epoch: ~{steps_per_epoch * 0.5 / 60:.1f} minutes")
+    print(f"Estimated total time: ~{total_steps * 0.5 / 3600:.1f} hours")
+    print(f"(Assumes ~0.5 seconds per step)")
+    print(f"{'='*60}\n")
+    
     global_step = 0
     print(f"[Train] Starting {args.epochs} epochs on {device}...")
     

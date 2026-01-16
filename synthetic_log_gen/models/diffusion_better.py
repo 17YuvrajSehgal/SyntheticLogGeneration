@@ -155,13 +155,18 @@ class LogDiffusionModelBetter(nn.Module):
         target_hist = torch.histc(target_transitions.float(), bins=vocab_size*vocab_size,
                                   min=0, max=vocab_size*vocab_size-1)
         
-        # Normalize to probabilities
-        pred_hist = pred_hist / (pred_hist.sum() + 1e-8)
-        target_hist = target_hist / (target_hist.sum() + 1e-8)
+        # Normalize to probabilities with numerical stability
+        eps = 1e-8
+        pred_hist = pred_hist / (pred_hist.sum() + eps)
+        target_hist = target_hist / (target_hist.sum() + eps)
         
-        # KL divergence loss (encourage matching distribution)
-        # KL(target || pred) - we want pred to match target
-        kl_loss = F.kl_div(pred_hist.log(), target_hist, reduction='batchmean')
+        # Add small epsilon to avoid log(0)
+        pred_hist = torch.clamp(pred_hist, min=eps)
+        target_hist = torch.clamp(target_hist, min=eps)
+        
+        # KL divergence loss with numerical stability
+        # KL(target || pred) = sum(target * log(target / pred))
+        kl_loss = (target_hist * (target_hist.log() - pred_hist.log())).sum()
         
         return kl_loss
     
@@ -210,15 +215,23 @@ class LogDiffusionModelBetter(nn.Module):
             recon_loss += channel_loss
             recon_loss_per_channel[key] = channel_loss.detach()
         
-        # 8. NEW: Repetition Loss
-        repetition_loss, pred_rep_count, target_rep_count = self.compute_repetition_loss(
-            logits['event'], inputs['event']
-        )
+        # 8. NEW: Repetition Loss (only compute if weight > 0)
+        if self.repetition_weight > 0:
+            repetition_loss, pred_rep_count, target_rep_count = self.compute_repetition_loss(
+                logits['event'], inputs['event']
+            )
+        else:
+            repetition_loss = torch.tensor(0.0, device=device)
+            pred_rep_count = torch.tensor(0.0, device=device)
+            target_rep_count = torch.tensor(0.0, device=device)
         
-        # 9. NEW: Transition Frequency Loss
-        transition_loss = self.compute_transition_frequency_loss(
-            logits['event'], inputs['event']
-        )
+        # 9. NEW: Transition Frequency Loss (only compute if weight > 0)
+        if self.transition_weight > 0:
+            transition_loss = self.compute_transition_frequency_loss(
+                logits['event'], inputs['event']
+            )
+        else:
+            transition_loss = torch.tensor(0.0, device=device)
         
         # 10. Total Loss with NEW components
         total_loss = (

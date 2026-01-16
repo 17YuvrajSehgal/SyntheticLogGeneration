@@ -102,7 +102,12 @@ def main():
         print(f"[Generate] Generating {args.num_samples} samples in {num_batches} batches...")
         print(f"[Tip] Use --use-ddim for 10-20x faster generation!")
     
+    import time
+    start_time = time.time()
+    
     for i in range(num_batches):
+        batch_start = time.time()
+        
         # Handle last batch size
         curr_bs = min(args.batch_size, args.num_samples - i*args.batch_size)
         
@@ -120,8 +125,24 @@ def main():
             if k not in all_outputs:
                 all_outputs[k] = []
             all_outputs[k].append(arr)
+        
+        # Progress with time estimation
+        batch_time = time.time() - batch_start
+        elapsed = time.time() - start_time
+        samples_done = (i + 1) * args.batch_size
+        samples_done = min(samples_done, args.num_samples)
+        
+        if i > 0:  # After first batch, estimate remaining time
+            avg_time_per_batch = elapsed / (i + 1)
+            remaining_batches = num_batches - (i + 1)
+            eta_seconds = avg_time_per_batch * remaining_batches
+            eta_minutes = eta_seconds / 60
             
-        print(f"Batch {i+1}/{num_batches} done ({(i+1)*100//num_batches}%).", end="\r")
+            print(f"\n[Progress] Batch {i+1}/{num_batches} ({samples_done}/{args.num_samples} samples, {(i+1)*100//num_batches}%) | "
+                  f"Batch time: {batch_time:.1f}s | ETA: {eta_minutes:.1f} min")
+        else:
+            print(f"\n[Progress] Batch {i+1}/{num_batches} ({samples_done}/{args.num_samples} samples, {(i+1)*100//num_batches}%) | "
+                  f"Batch time: {batch_time:.1f}s")
         
     print("\n[Info] Concatenating outputs...")
     final_dict = {}

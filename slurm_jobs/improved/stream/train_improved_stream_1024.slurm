@@ -25,12 +25,13 @@ echo "============================================================"
 nvidia-smi
 
 # Activate virtual environment
-cd $SCRATCH/SyntheticLogGeneration
-source .venv/bin/activate
+REPO="/project/def-naser2/yuvraj/SyntheticLogGeneration"
+cd "$REPO"
+source "$REPO/.venv/bin/activate"
+export PYTHONUNBUFFERED=1
 
 # Set environment variables
 export SCRATCH=$SCRATCH
-export PYTHONUNBUFFERED=1
 
 # Training configuration
 BENCHMARK="stream"

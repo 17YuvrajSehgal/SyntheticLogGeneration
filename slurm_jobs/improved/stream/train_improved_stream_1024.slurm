@@ -55,7 +55,7 @@ echo ""
 
 # Train improved model with weights=0 (baseline comparison)
 echo "Starting training..."
-python train_experiment_better.py \
+python -u train_experiment_better.py \
     --data-root "$DATA_ROOT" \
     --benchmark "$BENCHMARK" \
     --seq-len $CONTEXT_LEN \

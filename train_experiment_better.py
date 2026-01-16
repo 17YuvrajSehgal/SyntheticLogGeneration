@@ -211,7 +211,14 @@ def main():
                 loss, metrics = model(batch)
                 if isinstance(loss, torch.Tensor) and loss.ndim > 0:
                     loss = loss.mean()
-                    metrics = {k: v.mean() if isinstance(v, torch.Tensor) else v for k, v in metrics.items()}
+                    # Handle DataParallel outputs - mean all tensor metrics
+                    for k, v in metrics.items():
+                        if k == "recon_loss_per_channel":
+                            # Nested dict - mean each channel loss
+                            metrics[k] = {ch: ch_loss.mean() if isinstance(ch_loss, torch.Tensor) and ch_loss.ndim > 0 else ch_loss 
+                                         for ch, ch_loss in v.items()}
+                        elif isinstance(v, torch.Tensor) and v.ndim > 0:
+                            metrics[k] = v.mean()
 
             scaler.scale(loss).backward()
             
@@ -287,7 +294,13 @@ def main():
                     v_loss, v_metrics = model(val_batch)
                     if isinstance(v_loss, torch.Tensor) and v_loss.ndim > 0:
                         v_loss = v_loss.mean()
-                        v_metrics = {k: v.mean() if isinstance(v, torch.Tensor) else v for k, v in v_metrics.items()}
+                        # Handle DataParallel outputs
+                        for k, v in v_metrics.items():
+                            if k == "recon_loss_per_channel":
+                                v_metrics[k] = {ch: ch_loss.mean() if isinstance(ch_loss, torch.Tensor) and ch_loss.ndim > 0 else ch_loss 
+                                               for ch, ch_loss in v.items()}
+                            elif isinstance(v, torch.Tensor) and v.ndim > 0:
+                                v_metrics[k] = v.mean()
                     
                     val_loss += v_loss.item()
                     val_latent_loss += v_metrics['latent_loss'].item()

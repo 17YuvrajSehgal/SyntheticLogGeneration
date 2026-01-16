@@ -60,7 +60,7 @@ python train_experiment_better.py \
     --seq-len $CONTEXT_LEN \
     --batch-size $BATCH_SIZE \
     --epochs $EPOCHS \
-    --d-model 4096 \
+    --d-model 256 \
     --nhead 4 \
     --num-layers 4 \
     --repetition-weight 0.0 \

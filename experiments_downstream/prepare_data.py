@@ -157,6 +157,7 @@ def combine_datasets(real_path, synthetic_path, output_path, real_ratio=0.5, see
     combined_data = {k: v[shuffle_indices] for k, v in combined_data.items()}
     
     # Save
+    os.makedirs(os.path.dirname(output_path) or '.', exist_ok=True)
     np.savez_compressed(output_path, **combined_data)
     print(f"[Saved] {output_path}")
     

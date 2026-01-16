@@ -5,7 +5,6 @@
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=8
-#SBATCH --mem=32G
 #SBATCH --time=4:00:00
 #SBATCH --output=/scratch/%u/improved_baseline_scimark2_256_%j.out
 #SBATCH --error=/scratch/%u/improved_baseline_scimark2_256_%j.err

@@ -129,6 +129,14 @@ def combine_datasets(real_path, synthetic_path, output_path, real_ratio=0.5, see
     # Determine sizes
     num_real = real_data['event'].shape[0]
     num_synth = synth_data['event'].shape[0]
+    real_seq_len = real_data['event'].shape[1]
+    synth_seq_len = synth_data['event'].shape[1]
+    
+    # Check sequence length compatibility
+    if real_seq_len != synth_seq_len:
+        print(f"[WARNING] Sequence length mismatch: real={real_seq_len}, synthetic={synth_seq_len}")
+        print(f"[SKIP] Cannot combine datasets with different sequence lengths")
+        return None
     
     # Calculate how many samples to take from each
     total_samples = min(num_real, num_synth) * 2  # Balanced

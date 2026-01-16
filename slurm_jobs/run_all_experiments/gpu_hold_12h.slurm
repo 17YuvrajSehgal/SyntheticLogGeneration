@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=gpu_hold_6h
+#SBATCH --job-name=gpu_hold_12
 #SBATCH --account=def-naser2
 #SBATCH --nodes=1
 #SBATCH --ntasks=1

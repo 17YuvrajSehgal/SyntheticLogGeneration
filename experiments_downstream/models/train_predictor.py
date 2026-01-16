@@ -53,12 +53,21 @@ class EventSequenceDataset(Dataset):
         self.windows = []
         num_traces, trace_len = self.data['event'].shape
         
+        print(f"[Debug] trace_len={trace_len}, seq_len={seq_len}")
+        
         for i in range(num_traces):
-            for start in range(0, max(1, trace_len - seq_len), stride):
-                end = start + seq_len
-                # Ensure we have a target event after the sequence
-                if end < trace_len:
-                    self.windows.append((i, start, end))
+            # Special case: if seq_len >= trace_len, use entire trace
+            if seq_len >= trace_len:
+                # Use first (trace_len - 1) events as input, last event as target
+                if trace_len > 1:
+                    self.windows.append((i, 0, trace_len - 1))
+            else:
+                # Normal sliding window
+                for start in range(0, trace_len - seq_len, stride):
+                    end = start + seq_len
+                    # Ensure we have a target event after the sequence
+                    if end < trace_len:
+                        self.windows.append((i, start, end))
         
         print(f"[Dataset] Loaded {len(self.windows)} windows from {num_traces} traces")
     

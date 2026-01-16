@@ -60,6 +60,12 @@ def main():
     parser.add_argument("--seq-len", type=int, default=1024)
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     
+    # Fast Sampling (DDIM)
+    parser.add_argument("--use-ddim", action="store_true", help="Use DDIM fast sampling (10-20x faster)")
+    parser.add_argument("--ddim-steps", type=int, default=50, help="Number of DDIM steps (default 50 vs 1000 for DDPM)")
+    parser.add_argument("--ddim-eta", type=float, default=0.0, help="DDIM stochasticity (0=deterministic, 1=DDPM)")
+
+    
     args = parser.parse_args()
     
     # 1. Init Model
@@ -87,15 +93,26 @@ def main():
     all_outputs = {}
     
     num_batches = (args.num_samples + args.batch_size - 1) // args.batch_size
-    print(f"[Generate] Generating {args.num_samples} samples in {num_batches} batches...")
+    
+    if args.use_ddim:
+        print(f"[Generate] Using DDIM fast sampling with {args.ddim_steps} steps (vs {args.steps} for DDPM)")
+        print(f"[Generate] Generating {args.num_samples} samples in {num_batches} batches...")
+    else:
+        print(f"[Generate] Using DDPM sampling with {args.steps} steps")
+        print(f"[Generate] Generating {args.num_samples} samples in {num_batches} batches...")
+        print(f"[Tip] Use --use-ddim for 10-20x faster generation!")
     
     for i in range(num_batches):
         # Handle last batch size
         curr_bs = min(args.batch_size, args.num_samples - i*args.batch_size)
         
         with torch.no_grad():
-            # sample() returns dict of tensors [B, L]
-            batch_out = model.sample(curr_bs, args.seq_len, args.device)
+            # Use DDIM or DDPM sampling
+            if args.use_ddim:
+                batch_out = model.sample_ddim(curr_bs, args.seq_len, args.device, 
+                                             ddim_steps=args.ddim_steps, eta=args.ddim_eta)
+            else:
+                batch_out = model.sample(curr_bs, args.seq_len, args.device)
             
         # Accumulate
         for k, v in batch_out.items():
@@ -104,7 +121,7 @@ def main():
                 all_outputs[k] = []
             all_outputs[k].append(arr)
             
-        print(f"Batch {i+1}/{num_batches} done.", end="\r")
+        print(f"Batch {i+1}/{num_batches} done ({(i+1)*100//num_batches}%).", end="\r")
         
     print("\n[Info] Concatenating outputs...")
     final_dict = {}

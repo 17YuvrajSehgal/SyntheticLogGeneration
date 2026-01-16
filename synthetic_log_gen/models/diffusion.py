@@ -203,4 +203,76 @@ class LogDiffusionModel(nn.Module):
                 outputs[k] = torch.argmax(v, dim=-1)
                 
         return outputs
+    
+    @torch.no_grad()
+    def sample_ddim(self, batch_size, seq_len, device, ddim_steps=50, eta=0.0):
+        """
+        Fast sampling using DDIM (Denoising Diffusion Implicit Models).
+        
+        Args:
+            batch_size: Number of samples to generate
+            seq_len: Sequence length
+            device: Device to use
+            ddim_steps: Number of sampling steps (default 50, vs 1000 for DDPM)
+            eta: Stochasticity parameter (0 = deterministic, 1 = DDPM)
+        
+        This is 10-20x faster than regular DDPM sampling!
+        """
+        # Create sampling schedule (subset of timesteps)
+        step_size = self.max_timesteps // ddim_steps
+        timesteps = list(range(0, self.max_timesteps, step_size))
+        timesteps = timesteps[:ddim_steps]
+        timesteps.reverse()
+        
+        # Start with noise
+        x = torch.randn(batch_size, seq_len, self.d_model, device=device)
+        
+        for i, t in enumerate(timesteps):
+            if i % 10 == 0:
+                print(f"  [DDIM] Step {i}/{ddim_steps} (t={t})...", end="\r")
+            
+            t_tensor = torch.full((batch_size,), t, device=device).long()
+            
+            # Predict noise
+            eps = self.denoiser(x, t_tensor)
+            
+            # Get alpha values
+            ab_t = self.alpha_bars[t]
+            
+            # Predict x0
+            x0_pred = (x - torch.sqrt(1 - ab_t) * eps) / torch.sqrt(ab_t)
+            
+            if i < len(timesteps) - 1:
+                # Get next timestep
+                t_next = timesteps[i + 1]
+                ab_next = self.alpha_bars[t_next]
+                
+                # DDIM update
+                sigma = eta * torch.sqrt((1 - ab_next) / (1 - ab_t)) * torch.sqrt(1 - ab_t / ab_next)
+                
+                # Direction pointing to x_t
+                dir_xt = torch.sqrt(1 - ab_next - sigma**2) * eps
+                
+                # Random noise
+                noise = torch.randn_like(x) if eta > 0 else 0
+                
+                # Update
+                x = torch.sqrt(ab_next) * x0_pred + dir_xt + sigma * noise
+            else:
+                # Final step
+                x = x0_pred
+        
+        print()  # New line after progress
+        
+        # Decode
+        logits = self.head(x)
+        outputs = {}
+        for k, v in logits.items():
+            if k == "dt":
+                outputs[k] = v
+            else:
+                outputs[k] = torch.argmax(v, dim=-1)
+                
+        return outputs
+
 

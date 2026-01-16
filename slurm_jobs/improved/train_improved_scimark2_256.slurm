@@ -5,7 +5,7 @@
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=8
-#SBATCH --time=4:00:00
+#SBATCH --time=8:00:00
 #SBATCH --output=/scratch/%u/improved_baseline_scimark2_256_%j.out
 #SBATCH --error=/scratch/%u/improved_baseline_scimark2_256_%j.err
 
@@ -37,7 +37,7 @@ BENCHMARK="scimark2"
 CONTEXT_LEN=256
 DATA_ROOT="$SCRATCH/window_shards/windowed_npz_${CONTEXT_LEN}"
 BATCH_SIZE=64
-EPOCHS=100
+EPOCHS=20
 RUN_NAME="improved_baseline_${BENCHMARK}_${CONTEXT_LEN}"
 
 echo ""

@@ -1,12 +1,12 @@
 #!/bin/bash
-#SBATCH --job-name=exp_ablation_system_ffmpeg
+#SBATCH --job-name=exp_ablation_full_pybench
 #SBATCH --account=def-naser2
 #SBATCH --gpus-per-node=h100:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=64G
 #SBATCH --time=3:00:00
-#SBATCH --output=/project/def-naser2/yuvraj/SyntheticLogGeneration/experiments_results/exp_ablation_system_ffmpeg/slurm_%j.out
-#SBATCH --error=/project/def-naser2/yuvraj/SyntheticLogGeneration/experiments_results/exp_ablation_system_ffmpeg/slurm_%j.err
+#SBATCH --output=/project/def-naser2/yuvraj/SyntheticLogGeneration/experiments_results/exp_ablation_full_pybench/slurm_%j.out
+#SBATCH --error=/project/def-naser2/yuvraj/SyntheticLogGeneration/experiments_results/exp_ablation_full_pybench/slurm_%j.err
 
 set -euo pipefail
 
@@ -19,22 +19,22 @@ source "$REPO/.venv/bin/activate"
 export PYTHONUNBUFFERED=1
 
 # Ensure specific experiment dir exists
-EXPERIMENT_DIR="$REPO/experiments_results/exp_ablation_system"
+EXPERIMENT_DIR="$REPO/experiments_results/exp_ablation_full_pybench"
 mkdir -p "$EXPERIMENT_DIR"
 
-echo "[START] Experiment: exp_ablation_system_ffmpeg"
+echo "[START] Experiment: exp_ablation_full_pybench"
 echo "Date: $(date)"
 echo "Output Directory: $EXPERIMENT_DIR"
 
 # Note: train_experiment.py joins log-dir and run-name.
-# So --log-dir experiments_results --run-name exp_ablation_system _ffmpeg
-# results in experiments_results/exp_ablation_system_ffmpeg
+# So --log-dir experiments_results --run-name exp_ablation_full_pybench
+# results in experiments_results/exp_ablation_full_pybench
 
 python -u train_experiment.py \
     --data-root "$SCRATCH/windowed_npz_1024" \
-    --benchmark "ffmpeg" \
+    --benchmark "pybench" \
     --seq-len 1024 \
-    --channels event dt cpu tid \
+    --channels event dt cpu tid comm ret \
     --model-type diffusion \
     --d-model 512 \
     --nhead 8 \
@@ -50,6 +50,6 @@ python -u train_experiment.py \
     --max-steps-per-epoch 500 \
     --mixed-precision bf16 \
     --log-dir experiments_results \
-    --run-name exp_ablation_system_ffmpeg
+    --run-name exp_ablation_full_pybench
 
-echo "[DONE] Finished exp_ablation_system_ffmpeg"
+echo "[DONE] Finished exp_ablation_full_pybench"

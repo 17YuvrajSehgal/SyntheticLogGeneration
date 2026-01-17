@@ -40,7 +40,7 @@ python run_ablation_pipeline.py \
     --system-epoch 19 \
     --full-epoch 19 \
     --num-samples 10000 \
-    --max-parallel 9
+    --max-parallel 9 \
     --skip-steps 1 2 3
 
 echo ""

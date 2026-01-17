@@ -33,7 +33,7 @@ def create_slurm_job(benchmark, output_dir="slurm_jobs/ablation"):
 
 def main():
     # Define benchmarks for ablation study
-    benchmarks = ["ffmpeg", "iozone", "scimark2"]
+    benchmarks = ["ffmpeg", "pybench", "scimark2"]
     
     print("="*60)
     print("Generating Ablation Study Slurm Jobs")

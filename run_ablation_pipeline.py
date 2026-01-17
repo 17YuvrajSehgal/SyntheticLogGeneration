@@ -95,6 +95,12 @@ def main():
     print(f"Max Parallel Jobs: {args.max_parallel}")
     print(f"{'='*80}\n")
     
+    # Define Step 0: Prepare real data (PREREQUISITE)
+    step0 = {
+        "name": "Prepare Real Data",
+        "cmd": f'python experiments_downstream/prepare_data.py --real-glob "{scratch}/window_shards/windowed_npz_1024/{benchmark}/train/*.npz" --benchmark {benchmark} --output-dir "{real_data_dir}"'
+    }
+    
     # Define Phase 1: Generate synthetic data (CAN RUN IN PARALLEL)
     phase1_steps = {
         1: {
@@ -169,6 +175,20 @@ def main():
             "cmd": f'python experiments_downstream/models/train_predictor.py --train-data "{ablation_dir}/hybrid_full_50_50.npz" --test-data "{real_data_dir}/real_test.npz" --channels event dt cpu tid comm ret --run-name cross_full_full --output-dir "{ablation_dir}/cross-results" --seq-len 128 --batch-size 64 --epochs 20'
         },
     }
+    
+    # STEP 0: Prepare real data (PREREQUISITE)
+    if 0 not in args.skip_steps:
+        print("\n" + "="*80)
+        print("STEP 0: Prepare Real Data")
+        print("="*80)
+        
+        success, _ = run_command(step0["cmd"], f"Step 0: {step0['name']}")
+        
+        if not success:
+            print(f"\n❌ Step 0 failed - cannot proceed without real data")
+            sys.exit(1)
+    else:
+        print("\n[Step 0] ⏭️  Skipped")
     
     # PHASE 1: Generate synthetic data (PARALLEL)
     print("\n" + "="*80)

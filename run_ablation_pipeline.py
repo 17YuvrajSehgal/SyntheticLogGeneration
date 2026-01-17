@@ -51,8 +51,12 @@ def main():
     parser.add_argument("--benchmark", required=True, help="Benchmark name (e.g., ffmpeg, iozone, scimark2)")
     parser.add_argument("--scratch", default=os.environ.get("SCRATCH", "/scratch/yuvraj17"),
                        help="Scratch directory path")
-    parser.add_argument("--checkpoint-epoch", type=int, default=19,
-                       help="Checkpoint epoch to use (default: 19)")
+    parser.add_argument("--base-epoch", type=int, default=19,
+                       help="Checkpoint epoch for base model (default: 19)")
+    parser.add_argument("--system-epoch", type=int, default=19,
+                       help="Checkpoint epoch for system model (default: 19)")
+    parser.add_argument("--full-epoch", type=int, default=19,
+                       help="Checkpoint epoch for full model (default: 19)")
     parser.add_argument("--num-samples", type=int, default=10000,
                        help="Number of synthetic samples to generate (default: 10000)")
     parser.add_argument("--skip-steps", nargs="+", type=int, default=[],
@@ -65,20 +69,27 @@ def main():
     # Configuration
     benchmark = args.benchmark
     scratch = args.scratch
-    ckpt_epoch = args.checkpoint_epoch
     num_samples = args.num_samples
     
-    # Paths
-    exp_results = f"{scratch}/SyntheticLogGeneration/experiments_results"
+    # Paths - using ffmpeg-ablation directory structure
+    exp_results = f"{scratch}/SyntheticLogGeneration/experiments_results/{benchmark}-ablation"
     ablation_dir = f"{scratch}/SyntheticLogGeneration/experiments_downstream_results/ablation-diffusion/{benchmark}"
     real_data_dir = f"{scratch}/SyntheticLogGeneration/experiments_downstream_results/ablation/{benchmark}/data"
+    
+    # Checkpoint paths
+    base_ckpt = f"{exp_results}/exp_ablation_base_{benchmark}/ckpt_epoch_{args.base_epoch}.pt"
+    system_ckpt = f"{exp_results}/exp_ablation_system_{benchmark}/ckpt_epoch_{args.system_epoch}.pt"
+    full_ckpt = f"{exp_results}/exp_ablation_full_{benchmark}/ckpt_epoch_{args.full_epoch}.pt"
     
     print(f"\n{'='*80}")
     print(f"Ablation Study Pipeline (Option 3): {benchmark}")
     print(f"{'='*80}")
     print(f"Benchmark: {benchmark}")
     print(f"Num Samples: {num_samples}")
-    print(f"Checkpoint Epoch: {ckpt_epoch}")
+    print(f"Checkpoints:")
+    print(f"  Base (epoch {args.base_epoch}): {base_ckpt}")
+    print(f"  System (epoch {args.system_epoch}): {system_ckpt}")
+    print(f"  Full (epoch {args.full_epoch}): {full_ckpt}")
     print(f"Output Directory: {ablation_dir}")
     print(f"Skip Steps: {args.skip_steps if args.skip_steps else 'None'}")
     print(f"Max Parallel Jobs: {args.max_parallel}")
@@ -88,15 +99,15 @@ def main():
     phase1_steps = {
         1: {
             "name": "Generate Synthetic (Base Model)",
-            "cmd": f'python sample_diffusion.py --ckpt "{exp_results}/exp_ablation_base_{benchmark}/ckpt_epoch_{ckpt_epoch}.pt" --out "{ablation_dir}/synthetic_base_10k.npz" --num-samples {num_samples} --seq-len 1024 --d-model 512 --nhead 8 --num-layers 8 --use-ddim --ddim-steps 50'
+            "cmd": f'python sample_diffusion.py --ckpt "{base_ckpt}" --out "{ablation_dir}/synthetic_base_10k.npz" --num-samples {num_samples} --seq-len 1024 --d-model 512 --nhead 8 --num-layers 8 --use-ddim --ddim-steps 50'
         },
         2: {
             "name": "Generate Synthetic (System Model)",
-            "cmd": f'python sample_diffusion.py --ckpt "{exp_results}/exp_ablation_system_{benchmark}/ckpt_epoch_{ckpt_epoch}.pt" --out "{ablation_dir}/synthetic_system_10k.npz" --num-samples {num_samples} --seq-len 1024 --d-model 512 --nhead 8 --num-layers 8 --use-ddim --ddim-steps 50'
+            "cmd": f'python sample_diffusion.py --ckpt "{system_ckpt}" --out "{ablation_dir}/synthetic_system_10k.npz" --num-samples {num_samples} --seq-len 1024 --d-model 512 --nhead 8 --num-layers 8 --use-ddim --ddim-steps 50'
         },
         3: {
             "name": "Generate Synthetic (Full Model)",
-            "cmd": f'python sample_diffusion.py --ckpt "{exp_results}/exp_ablation_full_{benchmark}/ckpt_epoch_{ckpt_epoch}.pt" --out "{ablation_dir}/synthetic_full_10k.npz" --num-samples {num_samples} --seq-len 1024 --d-model 512 --nhead 8 --num-layers 8 --use-ddim --ddim-steps 50'
+            "cmd": f'python sample_diffusion.py --ckpt "{full_ckpt}" --out "{ablation_dir}/synthetic_full_10k.npz" --num-samples {num_samples} --seq-len 1024 --d-model 512 --nhead 8 --num-layers 8 --use-ddim --ddim-steps 50'
         },
     }
     

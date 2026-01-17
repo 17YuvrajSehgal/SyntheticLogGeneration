@@ -36,7 +36,9 @@ export PYTHONUNBUFFERED=1
 # Run the ablation pipeline
 python run_ablation_pipeline.py \
     --benchmark {BENCHMARK} \
-    --checkpoint-epoch 19 \
+    --base-epoch 19 \
+    --system-epoch 19 \
+    --full-epoch 19 \
     --num-samples 10000 \
     --max-parallel 9
 

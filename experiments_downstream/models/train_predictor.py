@@ -17,6 +17,7 @@ from sklearn.metrics import f1_score, accuracy_score, classification_report
 import sys
 
 from next_event_predictor import NextEventPredictor, NextEventPredictorEventOnly
+from flexible_predictor import FlexibleNextEventPredictor
 
 # Add parent directory to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -296,8 +297,8 @@ def main():
     )
     
     # Create model based on channels
-    # Use event-only model if only 'event' channel, otherwise use full model
     if channels == ['event']:
+        # Event-only model
         model = NextEventPredictorEventOnly(
             num_events=vocab_sizes['event'],
             d_model=args.d_model,
@@ -307,7 +308,8 @@ def main():
             max_seq_len=args.seq_len
         )
         print(f"[Info] Using NextEventPredictorEventOnly")
-    else:
+    elif set(channels) == {'event', 'dt', 'cpu', 'tid', 'comm', 'ret'}:
+        # Full model with all 6 channels - use optimized version
         model = NextEventPredictor(
             vocab_sizes=vocab_sizes,
             d_model=args.d_model,
@@ -316,7 +318,19 @@ def main():
             dropout=args.dropout,
             max_seq_len=args.seq_len
         )
-        print(f"[Info] Using NextEventPredictor with channels: {channels}")
+        print(f"[Info] Using NextEventPredictor (full, all 6 channels)")
+    else:
+        # Partial channels - use flexible model
+        model = FlexibleNextEventPredictor(
+            vocab_sizes=vocab_sizes,
+            channels=channels,
+            d_model=args.d_model,
+            nhead=args.nhead,
+            num_layers=args.num_layers,
+            dropout=args.dropout,
+            max_seq_len=args.seq_len
+        )
+        print(f"[Info] Using FlexibleNextEventPredictor with channels: {channels}")
     
     model = model.to(args.device)
     

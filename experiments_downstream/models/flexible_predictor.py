@@ -29,18 +29,20 @@ class FlexibleNextEventPredictor(nn.Module):
         self.max_seq_len = max_seq_len
         
         # Create embeddings only for requested channels
+        # Use 'emb_' prefix to avoid conflicts with PyTorch reserved names like 'cpu'
         self.embeddings = nn.ModuleDict()
         emb_dims = []
         
         for ch in channels:
+            key = f'emb_{ch}'  # Add prefix to avoid reserved names
             if ch == 'event':
-                self.embeddings[ch] = nn.Embedding(vocab_sizes['event'], d_model // 3)
+                self.embeddings[key] = nn.Embedding(vocab_sizes['event'], d_model // 3)
                 emb_dims.append(d_model // 3)
             elif ch == 'dt':
-                self.embeddings[ch] = nn.Linear(1, d_model // 6)
+                self.embeddings[key] = nn.Linear(1, d_model // 6)
                 emb_dims.append(d_model // 6)
             elif ch in ['cpu', 'tid', 'comm', 'ret', 'fd']:
-                self.embeddings[ch] = nn.Embedding(vocab_sizes[ch], d_model // 12)
+                self.embeddings[key] = nn.Embedding(vocab_sizes[ch], d_model // 12)
                 emb_dims.append(d_model // 12)
         
         # Fusion layer
@@ -79,12 +81,13 @@ class FlexibleNextEventPredictor(nn.Module):
         embeddings = []
         
         for ch in self.channels:
+            key = f'emb_{ch}'  # Match the prefix used in __init__
             if ch == 'dt':
                 # Continuous feature
-                emb = self.embeddings[ch](inputs[ch].unsqueeze(-1).float())
+                emb = self.embeddings[key](inputs[ch].unsqueeze(-1).float())
             else:
                 # Discrete feature
-                emb = self.embeddings[ch](inputs[ch])
+                emb = self.embeddings[key](inputs[ch])
             embeddings.append(emb)
         
         # Concatenate all embeddings

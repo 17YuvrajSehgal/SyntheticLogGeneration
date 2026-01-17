@@ -208,6 +208,8 @@ def main():
     
     # Model
     parser.add_argument('--model-type', default='full', choices=['full', 'event_only'])
+    parser.add_argument('--channels', nargs='+', default=None,
+                       help='Channels to use (e.g., --channels event dt cpu). Overrides --model-type.')
     parser.add_argument('--d-model', type=int, default=256)
     parser.add_argument('--nhead', type=int, default=8)
     parser.add_argument('--num-layers', type=int, default=4)
@@ -243,8 +245,15 @@ def main():
     vocab_sizes = get_vocab_sizes(args.vocab_dir)
     print(f"[Info] Vocab sizes: {vocab_sizes}")
     
-    # Create datasets
-    channels = ['event', 'dt', 'cpu', 'tid', 'comm', 'ret'] if args.model_type == 'full' else ['event']
+    # Determine channels to use
+    if args.channels is not None:
+        # User specified channels explicitly
+        channels = args.channels
+        print(f"[Info] Using specified channels: {channels}")
+    else:
+        # Fall back to model_type
+        channels = ['event', 'dt', 'cpu', 'tid', 'comm', 'ret'] if args.model_type == 'full' else ['event']
+        print(f"[Info] Using channels from model_type '{args.model_type}': {channels}")
     
     train_dataset = EventSequenceDataset(
         args.train_data,
@@ -276,17 +285,9 @@ def main():
         pin_memory=True
     )
     
-    # Create model
-    if args.model_type == 'full':
-        model = NextEventPredictor(
-            vocab_sizes=vocab_sizes,
-            d_model=args.d_model,
-            nhead=args.nhead,
-            num_layers=args.num_layers,
-            dropout=args.dropout,
-            max_seq_len=args.seq_len
-        )
-    else:
+    # Create model based on channels
+    # Use event-only model if only 'event' channel, otherwise use full model
+    if channels == ['event']:
         model = NextEventPredictorEventOnly(
             num_events=vocab_sizes['event'],
             d_model=args.d_model,
@@ -295,6 +296,17 @@ def main():
             dropout=args.dropout,
             max_seq_len=args.seq_len
         )
+        print(f"[Info] Using NextEventPredictorEventOnly")
+    else:
+        model = NextEventPredictor(
+            vocab_sizes=vocab_sizes,
+            d_model=args.d_model,
+            nhead=args.nhead,
+            num_layers=args.num_layers,
+            dropout=args.dropout,
+            max_seq_len=args.seq_len
+        )
+        print(f"[Info] Using NextEventPredictor with channels: {channels}")
     
     model = model.to(args.device)
     

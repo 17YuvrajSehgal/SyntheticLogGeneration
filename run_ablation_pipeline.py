@@ -84,9 +84,8 @@ def main():
     print(f"Max Parallel Jobs: {args.max_parallel}")
     print(f"{'='*80}\n")
     
-    # Define sequential steps
-    sequential_steps = {
-        # Phase 1: Generate synthetic data
+    # Define Phase 1: Generate synthetic data (CAN RUN IN PARALLEL)
+    phase1_steps = {
         1: {
             "name": "Generate Synthetic (Base Model)",
             "cmd": f'python sample_diffusion.py --ckpt "{exp_results}/exp_ablation_base_{benchmark}/ckpt_epoch_{ckpt_epoch}.pt" --out "{ablation_dir}/synthetic_base_10k.npz" --num-samples {num_samples} --seq-len 1024 --d-model 512 --nhead 8 --num-layers 8 --use-ddim --ddim-steps 50'
@@ -99,7 +98,10 @@ def main():
             "name": "Generate Synthetic (Full Model)",
             "cmd": f'python sample_diffusion.py --ckpt "{exp_results}/exp_ablation_full_{benchmark}/ckpt_epoch_{ckpt_epoch}.pt" --out "{ablation_dir}/synthetic_full_10k.npz" --num-samples {num_samples} --seq-len 1024 --d-model 512 --nhead 8 --num-layers 8 --use-ddim --ddim-steps 50'
         },
-        # Phase 2: Create hybrid datasets
+    }
+    
+    # Define Phase 2: Create hybrid datasets (MUST BE SEQUENTIAL - depends on Phase 1)
+    phase2_steps = {
         4: {
             "name": "Create Hybrid (Base)",
             "cmd": f'python experiments_downstream/combine_datasets.py --real-data "{real_data_dir}/real_train.npz" --synthetic-data "{ablation_dir}/synthetic_base_10k.npz" --output "{ablation_dir}/hybrid_base_50_50.npz" --ratio 0.5'
@@ -114,8 +116,8 @@ def main():
         },
     }
     
-    # Define parallel training steps
-    parallel_steps = {
+    # Define Phase 3: Train cross-evaluation predictors (CAN RUN IN PARALLEL)
+    phase3_steps = {
         # Row 1: Base diffusion model
         7: {
             "name": "Train: Base → event",
@@ -157,36 +159,69 @@ def main():
         },
     }
     
-    # Run sequential steps (1-6)
+    # PHASE 1: Generate synthetic data (PARALLEL)
     print("\n" + "="*80)
-    print("PHASE 1 & 2: Sequential Steps (Generate + Combine)")
+    print("PHASE 1: Generate Synthetic Data (Parallel)")
+    print("="*80)
+    print("Running 3 sample generation jobs in parallel...\n")
+    
+    active_phase1 = {k: v for k, v in phase1_steps.items() if k not in args.skip_steps}
+    
+    if active_phase1:
+        with ProcessPoolExecutor(max_workers=3) as executor:
+            futures = {
+                executor.submit(run_command, step["cmd"], f"Step {num}: {step['name']}"): num
+                for num, step in active_phase1.items()
+            }
+            
+            completed = 0
+            total = len(futures)
+            failed_steps = []
+            
+            for future in as_completed(futures):
+                step_num = futures[future]
+                success, step_name = future.result()
+                completed += 1
+                
+                if not success:
+                    failed_steps.append(step_num)
+                
+                print(f"\n[Progress] {completed}/{total} generation jobs completed")
+            
+            if failed_steps:
+                print(f"\n❌ Phase 1 failed: Steps {failed_steps}")
+                sys.exit(1)
+    
+    # PHASE 2: Create hybrid datasets (SEQUENTIAL)
+    print("\n" + "="*80)
+    print("PHASE 2: Create Hybrid Datasets (Sequential)")
     print("="*80)
     
-    for step_num in range(1, 7):
+    for step_num in range(4, 7):
         if step_num in args.skip_steps:
             print(f"\n[Step {step_num}] ⏭️  Skipped")
             continue
         
-        step = sequential_steps[step_num]
+        step = phase2_steps[step_num]
         success, _ = run_command(step["cmd"], f"Step {step_num}: {step['name']}")
         
         if not success:
-            print(f"\n❌ Pipeline failed at Step {step_num}")
+            print(f"\n❌ Phase 2 failed at Step {step_num}")
             sys.exit(1)
     
-    # Run parallel training steps (7-15)
+    # PHASE 3: Train cross-evaluation predictors (PARALLEL)
     print("\n" + "="*80)
-    print("PHASE 3: Parallel Training (9 Cross-Evaluation Experiments)")
+    print("PHASE 3: Cross-Evaluation Training (Parallel)")
     print("="*80)
     print(f"Running up to {args.max_parallel} training experiments in parallel...\n")
     
-    active_parallel_steps = {k: v for k, v in parallel_steps.items() if k not in args.skip_steps}
+    active_phase3 = {k: v for k, v in phase3_steps.items() if k not in args.skip_steps}
     
-    if active_parallel_steps:
+    if active_phase3:
         with ProcessPoolExecutor(max_workers=args.max_parallel) as executor:
             futures = {
                 executor.submit(run_command, step["cmd"], f"Step {num}: {step['name']}"): num
-                for num, step in active_parallel_steps.items()
+                for num, step in active_phase3.items()
             }
             
             completed = 0
@@ -204,7 +239,7 @@ def main():
                 print(f"\n[Progress] {completed}/{total} training experiments completed")
             
             if failed_steps:
-                print(f"\n❌ Some training experiments failed: Steps {failed_steps}")
+                print(f"\n❌ Phase 3 failed: Steps {failed_steps}")
                 sys.exit(1)
     
     print("\n" + "="*80)

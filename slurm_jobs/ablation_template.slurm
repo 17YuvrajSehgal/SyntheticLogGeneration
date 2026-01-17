@@ -5,7 +5,7 @@
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
-#SBATCH --time=48:00:00
+#SBATCH --time=6:00:00
 #SBATCH --output=/scratch/%u/ablation_{BENCHMARK}_%j.out
 #SBATCH --error=/scratch/%u/ablation_{BENCHMARK}_%j.err
 

@@ -110,7 +110,7 @@ def get_vocab_sizes(vocab_dir):
     return sizes
 
 
-def train_epoch(model, dataloader, optimizer, criterion, device):
+def train_epoch(model, dataloader, optimizer, criterion, device, event_only=False):
     """Train for one epoch."""
     model.train()
     total_loss = 0
@@ -124,7 +124,12 @@ def train_epoch(model, dataloader, optimizer, criterion, device):
         
         # Forward
         optimizer.zero_grad()
-        logits = model(inputs)
+        if event_only:
+            # Event-only model expects just the event tensor
+            logits = model(inputs['event'])
+        else:
+            # Full model expects dict of all channels
+            logits = model(inputs)
         loss = criterion(logits, targets)
         
         # Backward
@@ -145,7 +150,7 @@ def train_epoch(model, dataloader, optimizer, criterion, device):
 
 
 @torch.no_grad()
-def evaluate(model, dataloader, criterion, device, num_classes):
+def evaluate(model, dataloader, criterion, device, num_classes, event_only=False):
     """Evaluate model."""
     model.eval()
     total_loss = 0
@@ -159,7 +164,12 @@ def evaluate(model, dataloader, criterion, device, num_classes):
         targets = targets.to(device)
         
         # Forward
-        logits = model(inputs)
+        if event_only:
+            # Event-only model expects just the event tensor
+            logits = model(inputs['event'])
+        else:
+            # Full model expects dict of all channels
+            logits = model(inputs)
         loss = criterion(logits, targets)
         
         total_loss += loss.item()
@@ -310,6 +320,9 @@ def main():
     
     model = model.to(args.device)
     
+    # Determine if using event-only model
+    event_only = (channels == ['event'])
+    
     # Optimizer and loss
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr)
     criterion = nn.CrossEntropyLoss()
@@ -323,11 +336,11 @@ def main():
         print(f"\n[Epoch {epoch+1}/{args.epochs}]")
         
         # Train
-        train_loss, train_acc = train_epoch(model, train_loader, optimizer, criterion, args.device)
+        train_loss, train_acc = train_epoch(model, train_loader, optimizer, criterion, args.device, event_only)
         
         # Evaluate
         test_metrics, test_preds, test_targets = evaluate(
-            model, test_loader, criterion, args.device, vocab_sizes['event']
+            model, test_loader, criterion, args.device, vocab_sizes['event'], event_only
         )
         
         # Log
@@ -377,7 +390,7 @@ def main():
     model.load_state_dict(checkpoint['model_state_dict'])
     
     final_metrics, final_preds, final_targets = evaluate(
-        model, test_loader, criterion, args.device, vocab_sizes['event']
+        model, test_loader, criterion, args.device, vocab_sizes['event'], event_only
     )
     
     # Save final metrics

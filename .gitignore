@@ -11,3 +11,4 @@ dataset/window_shards
 __pycache__/
 *.pyc
 logs_tensorboard
+/experiments_results

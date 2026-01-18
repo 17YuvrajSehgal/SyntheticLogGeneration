@@ -39,14 +39,6 @@ BATCH_SIZE=64
 EPOCHS=20
 RUN_NAME="improved_ablation_${BENCHMARK}_${CONTEXT_LEN}"
 
-# Ensure specific experiment dir exists
-EXPERIMENT_DIR="$REPO/experiments_results/exp_ablation_base_ffmpeg_improved"
-mkdir -p "$EXPERIMENT_DIR"
-
-echo "[START] Experiment: exp_ablation_base_ffmpeg"
-echo "Date: $(date)"
-echo "Output Directory: $EXPERIMENT_DIR"
-
 python train_experiment_better.py \
     --data-root "$DATA_ROOT" \
     --benchmark "$BENCHMARK" \

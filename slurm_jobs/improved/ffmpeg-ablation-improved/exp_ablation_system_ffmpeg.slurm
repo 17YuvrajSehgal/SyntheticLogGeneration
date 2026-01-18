@@ -40,7 +40,7 @@ EPOCHS=20
 RUN_NAME="improved_ablation_${BENCHMARK}_${CONTEXT_LEN}"
 
 # Ensure specific experiment dir exists
-EXPERIMENT_DIR="$REPO/experiments_results/exp_ablation_system"
+EXPERIMENT_DIR="$REPO/experiments_results/exp_ablation_system_improved"
 mkdir -p "$EXPERIMENT_DIR"
 
 echo "[START] Experiment: exp_ablation_system_ffmpeg"

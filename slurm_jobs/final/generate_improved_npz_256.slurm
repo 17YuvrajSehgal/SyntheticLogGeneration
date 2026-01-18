@@ -41,11 +41,11 @@ print(f"PyArrow version: {pa.__version__}")
 EOF
 
 # Paths
-PROJECT_DIR="/project/def-naser2/yuvraj/SyntheticLogGeneration"
+PROJECT_DIR="/scratch/yuvraj17/SyntheticLogGeneration"
 SCRIPT="$PROJECT_DIR/data_processing/parquet_to_windowed_npz_improved.py"
-INPUT_DIR="$SCRATCH/enriched_parquet"
+INPUT_DIR="/scratch/yuvraj17/enriched_parquet"
 VOCAB_DIR="$PROJECT_DIR/dataset/metadata_all_events"
-OUTPUT_DIR="$SCRATCH/improved_window_shards/windowed_npz_256"
+OUTPUT_DIR="/scratch/yuvraj17/improved_window_shards/windowed_npz_256"
 
 # Parameters
 SEQ_LEN=256

@@ -1,55 +1,65 @@
 #!/bin/bash
-#SBATCH --job-name=exp_ablation_full_pybench
+#SBATCH --job-name=exp_ablation_full_pybench_improved
 #SBATCH --account=def-naser2
-#SBATCH --gpus-per-node=h100:1
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
-#SBATCH --mem=64G
 #SBATCH --time=3:00:00
-#SBATCH --output=/project/def-naser2/yuvraj/SyntheticLogGeneration/experiments_results/exp_ablation_full_pybench/slurm_%j.out
-#SBATCH --error=/project/def-naser2/yuvraj/SyntheticLogGeneration/experiments_results/exp_ablation_full_pybench/slurm_%j.err
+#SBATCH --output=/scratch/%u/exp_ablation_full_pybench_4096_improved_%j.out
+#SBATCH --error=/scratch/%u/exp_ablation_full_pybench_4096_improved_%j.err
 
 set -euo pipefail
 
+# Load modules
 module --force purge
 module load StdEnv/2023 python/3.11 cuda/12.2
 
-REPO="/project/def-naser2/yuvraj/SyntheticLogGeneration"
-cd "$REPO"
-source "$REPO/.venv/bin/activate"
+echo "============================================================"
+echo "Improved Ablation Model Training: pybench-4096"
+echo "============================================================"
+echo "JobID: $SLURM_JOB_ID"
+echo "Node:  $SLURM_NODELIST"
+echo "Start: $(date)"
+echo "============================================================"
+
+# Activate virtual environment
+cd $SCRATCH/SyntheticLogGeneration
+source .venv/bin/activate
+
+# Set environment variables
+export SCRATCH=$SCRATCH
 export PYTHONUNBUFFERED=1
+
+# Training configuration
+BENCHMARK="pybench"
+CONTEXT_LEN=4096
+DATA_ROOT="$SCRATCH/window_shards/windowed_npz_${CONTEXT_LEN}"
+BATCH_SIZE=64
+EPOCHS=20
+RUN_NAME="improved_ablation_${BENCHMARK}_${CONTEXT_LEN}"
 
 # Ensure specific experiment dir exists
 EXPERIMENT_DIR="$REPO/experiments_results/exp_ablation_full_pybench"
 mkdir -p "$EXPERIMENT_DIR"
 
-echo "[START] Experiment: exp_ablation_full_pybench"
+echo "[START] Experiment: exp_ablation_full_pybench_4096"
 echo "Date: $(date)"
 echo "Output Directory: $EXPERIMENT_DIR"
 
-# Note: train_experiment.py joins log-dir and run-name.
-# So --log-dir experiments_results --run-name exp_ablation_full_pybench
-# results in experiments_results/exp_ablation_full_pybench
-
-python -u train_experiment.py \
-    --data-root "$SCRATCH/windowed_npz_1024" \
-    --benchmark "pybench" \
-    --seq-len 1024 \
+python train_experiment_better.py \
+    --data-root "$DATA_ROOT" \
+    --benchmark "$BENCHMARK" \
+    --seq-len $CONTEXT_LEN \
+    --batch-size $BATCH_SIZE \
+    --epochs $EPOCHS \
     --channels event dt cpu tid comm ret \
-    --model-type diffusion \
-    --d-model 512 \
-    --nhead 8 \
-    --num-layers 8 \
-    --batch-size 128 \
-    --num-workers 8 \
-    --num-cpus 4 \
-    --tid-buckets 256 \
-    --fd-cap 1025 \
-    --epochs 20 \
-    --steps 1000 \
-    --lr 2e-4 \
-    --max-steps-per-epoch 500 \
+    --d-model 256 \
+    --nhead 4 \
+    --num-layers 4 \
+    --repetition-weight 0.0 \
+    --transition-weight 0.0 \
     --mixed-precision bf16 \
-    --log-dir experiments_results \
-    --run-name exp_ablation_full_pybench
+    --log-dir logs_tensorboard \
+    --run-name "$RUN_NAME"
 
-echo "[DONE] Finished exp_ablation_full_pybench"
+echo "[DONE] Finished exp_ablation_full_pybench_4096"

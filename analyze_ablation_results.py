@@ -95,7 +95,7 @@ def create_matrix_table(df):
 def main():
     parser = argparse.ArgumentParser(description='Analyze ablation study results')
     parser.add_argument('--benchmark', required=True, help='Benchmark name (e.g., ffmpeg)')
-    parser.add_argument('--base-dir', default='$SCRATCH/SyntheticLogGeneration/experiments_downstream_results/ablation-diffusion',
+    parser.add_argument('--base-dir', default='experiments_downstream_results/ablation-diffusion',
                        help='Base directory for results')
     
     args = parser.parse_args()

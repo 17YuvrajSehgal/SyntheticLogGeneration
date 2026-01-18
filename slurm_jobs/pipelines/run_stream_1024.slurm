@@ -38,7 +38,7 @@ export PYTHONUNBUFFERED=1
 python run_pipeline.py \
     --benchmark stream \
     --window 1024 \
-    --checkpoint-epoch 19 \
+    --checkpoint-epoch 5 \
     --num-samples 10000
 
 echo ""

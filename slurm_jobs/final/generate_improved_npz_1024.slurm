@@ -67,6 +67,14 @@ echo ""
 mkdir -p "$OUTPUT_DIR"
 mkdir -p "/scratch/yuvraj17/final_logs"
 
+# Activate virtual environment
+cd $SCRATCH/SyntheticLogGeneration
+source .venv/bin/activate
+
+# Set environment variables
+export SCRATCH=$SCRATCH
+export PYTHONUNBUFFERED=1
+
 # Run conversion
 echo "Starting conversion..."
 python -u "$SCRIPT" \

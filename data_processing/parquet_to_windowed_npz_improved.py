@@ -47,7 +47,8 @@ def process_file_to_shards(
     windows_per_shard: int = 1000,
     tid_buckets: int = 256,
     fd_cap: int = 1024,
-    split: str = "train"
+    split: str = "train",
+    benchmark: str = None  # NEW: benchmark name
 ):
     """
     Reads a parquet file, tokenizes/normalizes columns, sequences them, 
@@ -68,6 +69,7 @@ def process_file_to_shards(
         tid_buckets: Number of buckets for thread ID hashing
         fd_cap: Maximum file descriptor value
         split: Dataset split (train/val/test)
+        benchmark: Benchmark name (e.g., 'pybench', 'ffmpeg')
     
     Returns:
         Number of shards created
@@ -167,7 +169,15 @@ def process_file_to_shards(
         
         # Save this shard
         out_name = f"{stub}_L{seq_len}_S{stride}_shard{shard_count:04d}.npz"
-        out_path = os.path.join(output_dir, split, out_name)
+        
+        # NEW: Organize by benchmark/split instead of split only
+        if benchmark:
+            out_path = os.path.join(output_dir, benchmark, split, out_name)
+        else:
+            out_path = os.path.join(output_dir, split, out_name)
+        
+        # Ensure directory exists
+        os.makedirs(os.path.dirname(out_path), exist_ok=True)
         
         np.savez_compressed(
             out_path,
@@ -187,15 +197,41 @@ def process_file_to_shards(
 
 def process_file_wrapper(args):
     """Wrapper for multiprocessing."""
-    parquet_path, output_dir, vocab_comm, vocab_ret, seq_len, stride, windows_per_shard, split = args
+    parquet_path, output_dir, vocab_comm, vocab_ret, seq_len, stride, windows_per_shard, split, benchmark = args
     try:
         shard_count = process_file_to_shards(
             parquet_path, output_dir, vocab_comm, vocab_ret,
-            seq_len, stride, windows_per_shard, split=split
+            seq_len, stride, windows_per_shard, split=split, benchmark=benchmark
         )
         return (parquet_path, shard_count, None)
     except Exception as e:
         return (parquet_path, 0, str(e))
+
+
+def extract_benchmark_name(parquet_path):
+    """
+    Extract benchmark name from parquet file path.
+    
+    Assumes structure like: .../enriched_parquet/pybench/file.parquet
+    or .../enriched_parquet/txt_traces_pybench/file.parquet
+    
+    Returns benchmark name (e.g., 'pybench', 'ffmpeg', 'scimark2')
+    """
+    path_parts = Path(parquet_path).parts
+    
+    # Look for common benchmark names in the path
+    benchmark_names = ['pybench', 'ffmpeg', 'scimark2', 'stream', 'unpack-linux', 
+                      'compress-gzip', 'iozone', 'ramspeed', 'phpbench']
+    
+    for part in reversed(path_parts):
+        # Check if this part contains a benchmark name
+        part_lower = part.lower()
+        for bench in benchmark_names:
+            if bench in part_lower:
+                return bench
+    
+    # Fallback: use parent directory name
+    return Path(parquet_path).parent.name
 
 
 def main():
@@ -229,10 +265,6 @@ def main():
     vocab_comm = load_vocab(os.path.join(args.vocab_dir, "vocab_comm.json"))
     vocab_ret = load_vocab(os.path.join(args.vocab_dir, "vocab_ret.json"))
     
-    # Prepare Dirs
-    for s in ["train", "val", "test"]:
-        os.makedirs(os.path.join(args.output_dir, s), exist_ok=True)
-        
     # Find Files
     files = sorted(glob.glob(f"{args.input_dir}/**/*.parquet", recursive=True))
     
@@ -267,7 +299,8 @@ def main():
             # Parallel processing
             task_args = [
                 (f, args.output_dir, vocab_comm, vocab_ret, 
-                 args.seq_len, args.stride, args.windows_per_shard, split_name)
+                 args.seq_len, args.stride, args.windows_per_shard, split_name,
+                 extract_benchmark_name(f))  # NEW: extract benchmark name
                 for f in file_list
             ]
             
@@ -291,10 +324,11 @@ def main():
             # Sequential processing
             total_shards = 0
             for f in tqdm(file_list, desc=f"{split_name}"):
+                benchmark = extract_benchmark_name(f)  # NEW: extract benchmark name
                 shard_count = process_file_to_shards(
                     f, args.output_dir, vocab_comm, vocab_ret,
                     args.seq_len, args.stride, args.windows_per_shard,
-                    split=split_name
+                    split=split_name, benchmark=benchmark
                 )
                 total_shards += shard_count
             
@@ -306,6 +340,7 @@ def main():
     
     print("\n[SUCCESS] Conversion complete!")
     print(f"[INFO] Output directory: {args.output_dir}")
+    print(f"[INFO] Output structure: {args.output_dir}/{{benchmark}}/{{train|val|test}}/")
     print(f"[TIP] Use the improved dataset loader for best performance")
 
 

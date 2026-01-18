@@ -337,7 +337,7 @@ Each experiment produces:
 
 ## 🎓 Research Contributions
 
-1. **First diffusion model for kernel traces** (vs RNNs/GANs)
+1. **First diffusion model for kernel traces**
 2. **Multi-modal learning** (6 channels vs event-only)
 3. **Constraint-guided repair** for hard validity guarantees
 4. **Downstream utility evaluation** (data augmentation benefit)

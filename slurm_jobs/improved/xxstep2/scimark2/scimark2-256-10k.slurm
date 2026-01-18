@@ -26,7 +26,7 @@ python experiments_downstream/combine_datasets.py --real-data "$SCRATCH/Syntheti
 # ============================================================
 # STEP 6: Train on real data (baseline)
 # ============================================================
-python experiments_downstream/models/train_predictor.py --train-data "$SCRATCH/SyntheticLogGeneration/experiments_downstream_results/scimark2/256/data/real_train.npz" --test-data "$SCRATCH/SyntheticLogGeneration/experiments_downstream_results/scimark2/256/data/real_test.npz" --run-name "real_baseline_scimark2_256" --output-dir "$SCRATCH/SyntheticLogGeneration/experiments_downstream_results/scimark2/256/results" --seq-len 128 --batch-size 64 --epochs 20
+python experiments_downstream/models/train_predictor.py --train-data "$SCRATCH/SyntheticLogGeneration/experiments_downstream_results/iozone/256/data/real_train.npz" --test-data "$SCRATCH/SyntheticLogGeneration/experiments_downstream_results/iozone/256/data/real_test.npz" --run-name "real_baseline_iozone_256" --output-dir "$SCRATCH/SyntheticLogGeneration/experiments_downstream_results/iozone/256/results" --seq-len 128 --batch-size 64 --epochs 20
 
 # ============================================================
 # STEP 7: Train only on synthetic data

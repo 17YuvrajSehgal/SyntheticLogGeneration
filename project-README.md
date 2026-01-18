@@ -169,10 +169,10 @@ Based on conversation history:
 
 - [`README.md`](README.md): Core training and sampling workflow
 - [`README_EXPERIMENTS.md`](README_EXPERIMENTS.md): Detailed experimental configurations
-- [`README_learn_constraints.md`](README_learn_constraints.md): Constraint learning system
+- [`README_learn_constraints.md`](data_processing/README_learn_constraints.md): Constraint learning system
 - [`fse_evaluation_report_template.md`](fse_evaluation_report_template.md): FSE paper evaluation template
-- [`dataset/README_npz.md`](dataset/README_npz.md): NPZ data format specification
-- [`dataset/README_parquet.md`](dataset/README_parquet.md): Parquet enrichment details
+- [`dataset/README_npz.md`](data_processing/README_npz.md): NPZ data format specification
+- [`dataset/README_parquet.md`](data_processing/README_parquet.md): Parquet enrichment details
 
 ---
 

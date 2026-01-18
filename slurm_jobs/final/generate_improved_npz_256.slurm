@@ -1,8 +1,11 @@
 #!/bin/bash
 #SBATCH --job-name=improved_npz_256
 #SBATCH --account=def-naser2
-#SBATCH --time=2:00:00
-#SBATCH --cpus-per-task=16
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --gpus-per-node=1
+#SBATCH --cpus-per-task=8
+#SBATCH --time=02:00:00
 #SBATCH --output=logs/improved_npz_256_%j.out
 #SBATCH --error=logs/improved_npz_256_%j.err
 

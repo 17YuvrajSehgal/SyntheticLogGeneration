@@ -5,7 +5,7 @@
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
-#SBATCH --time=6:00:00
+#SBATCH --time=8:00:00
 #SBATCH --output=/scratch/%u/ablation_ffmpeg_%j.out
 #SBATCH --error=/scratch/%u/ablation_ffmpeg_%j.err
 

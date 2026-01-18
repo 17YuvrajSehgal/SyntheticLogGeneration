@@ -3,11 +3,10 @@
 #SBATCH --account=def-naser2
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=8
 #SBATCH --time=02:00:00
-#SBATCH --output=logs/improved_npz_4096_%j.out
-#SBATCH --error=logs/improved_npz_4096_%j.err
+#SBATCH --output=/scratch/%u/final_logs/improved_npz_4096_%j.out
+#SBATCH --error=/scratch/%u/final_logs/improved_npz_4096_%j.err
 
 set -euo pipefail
 
@@ -66,7 +65,7 @@ echo ""
 
 # Create directories
 mkdir -p "$OUTPUT_DIR"
-mkdir -p "$PROJECT_DIR/logs"
+mkdir -p "/scratch/yuvraj17/final_logs"
 
 # Run conversion
 echo "Starting conversion..."

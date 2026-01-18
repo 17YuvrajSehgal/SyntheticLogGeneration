@@ -65,7 +65,7 @@ echo ""
 
 # Create directories
 mkdir -p "$OUTPUT_DIR"
-mkdir -p "$PROJECT_DIR/logs"
+mkdir -p "/scratch/yuvraj17/final_logs"
 
 # Run conversion
 echo "Starting conversion..."

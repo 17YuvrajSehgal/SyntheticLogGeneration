@@ -71,15 +71,15 @@ def main():
     scratch = args.scratch
     num_samples = args.num_samples
     
-    # Paths - using ffmpeg-ablation directory structure
-    exp_results = f"{scratch}/SyntheticLogGeneration/experiments_results/{benchmark}-ablation"
+    # Paths - using logs_tensorboard directory structure
+    logs_dir = f"{scratch}/SyntheticLogGeneration/logs_tensorboard"
     ablation_dir = f"{scratch}/SyntheticLogGeneration/experiments_downstream_results/ablation-diffusion/{benchmark}"
     real_data_dir = f"{scratch}/SyntheticLogGeneration/experiments_downstream_results/ablation/{benchmark}/data"
     
-    # Checkpoint paths
-    base_ckpt = f"{exp_results}/exp_ablation_base_{benchmark}/ckpt_epoch_{args.base_epoch}.pt"
-    system_ckpt = f"{exp_results}/exp_ablation_system_{benchmark}/ckpt_epoch_{args.system_epoch}.pt"
-    full_ckpt = f"{exp_results}/exp_ablation_full_{benchmark}/ckpt_epoch_{args.full_epoch}.pt"
+    # Checkpoint paths - format: improved_ablation_{benchmark}_4096_{model_type}
+    base_ckpt = f"{logs_dir}/improved_ablation_{benchmark}_4096_base/ckpt_epoch_{args.base_epoch}.pt"
+    system_ckpt = f"{logs_dir}/improved_ablation_{benchmark}_4096_system/ckpt_epoch_{args.system_epoch}.pt"
+    full_ckpt = f"{logs_dir}/improved_ablation_{benchmark}_4096_full/ckpt_epoch_{args.full_epoch}.pt"
     
     print(f"\n{'='*80}")
     print(f"Ablation Study Pipeline (Option 3): {benchmark}")

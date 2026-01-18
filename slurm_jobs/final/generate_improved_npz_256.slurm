@@ -3,7 +3,6 @@
 #SBATCH --account=def-naser2
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=8
 #SBATCH --time=02:00:00
 #SBATCH --output=/scratch/%u/final_logs/improved_npz_256_%j.out

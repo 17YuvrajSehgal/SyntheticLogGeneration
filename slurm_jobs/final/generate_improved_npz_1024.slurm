@@ -1,9 +1,8 @@
 #!/bin/bash
 #SBATCH --job-name=improved_npz_1024
 #SBATCH --account=def-naser2
-#SBATCH --time=10:00:00
+#SBATCH --time=2:00:00
 #SBATCH --cpus-per-task=16
-#SBATCH --mem=64G
 #SBATCH --output=logs/improved_npz_1024_%j.out
 #SBATCH --error=logs/improved_npz_1024_%j.err
 

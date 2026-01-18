@@ -37,7 +37,7 @@ CONTEXT_LEN=4096
 DATA_ROOT="$SCRATCH/window_shards/windowed_npz_${CONTEXT_LEN}"
 BATCH_SIZE=64
 EPOCHS=20
-RUN_NAME="improved_ablation_${BENCHMARK}_${CONTEXT_LEN}"
+RUN_NAME="improved_ablation_${BENCHMARK}_${CONTEXT_LEN}_base"
 
 echo ""
 echo "Configuration:"

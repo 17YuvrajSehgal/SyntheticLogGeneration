@@ -100,7 +100,7 @@ def main():
         },
         2: {
             "name": "Generate Synthetic Data",
-            "cmd": f'python sample_diffusion.py --ckpt "{ckpt_path}" --out "{data_dir}/synthetic_raw_{window}_{num_samples//1000}k.npz" --num-samples {num_samples} --seq-len {window} --batch-size {sample_batch} --d-model 512 --nhead 4 --num-layers 4 --use-ddim --ddim-steps 50'
+            "cmd": f'python sample_diffusion.py --ckpt "{ckpt_path}" --out "{data_dir}/synthetic_raw_{window}_{num_samples//1000}k.npz" --num-samples {num_samples} --seq-len {window} --batch-size {sample_batch} --d-model 512 --nhead 8 --num-layers 8 --use-ddim --ddim-steps 50'
         },
         3: {
             "name": "Create Combined (No Repair)",

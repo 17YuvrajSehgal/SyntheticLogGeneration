@@ -105,15 +105,15 @@ def main():
     phase1_steps = {
         1: {
             "name": "Generate Synthetic (Base Model)",
-            "cmd": f'python sample_diffusion.py --ckpt "{base_ckpt}" --out "{ablation_dir}/synthetic_base_10k.npz" --num-samples {num_samples} --seq-len 1024 --d-model 512 --nhead 8 --num-layers 8 --use-ddim --ddim-steps 50'
+            "cmd": f'python sample_diffusion.py --ckpt "{base_ckpt}" --out "{ablation_dir}/synthetic_base_10k.npz" --num-samples {num_samples} --seq-len 1024 --d-model 256 --nhead 4 --num-layers 4 --use-ddim --ddim-steps 50'
         },
         2: {
             "name": "Generate Synthetic (System Model)",
-            "cmd": f'python sample_diffusion.py --ckpt "{system_ckpt}" --out "{ablation_dir}/synthetic_system_10k.npz" --num-samples {num_samples} --seq-len 1024 --d-model 512 --nhead 8 --num-layers 8 --use-ddim --ddim-steps 50'
+            "cmd": f'python sample_diffusion.py --ckpt "{system_ckpt}" --out "{ablation_dir}/synthetic_system_10k.npz" --num-samples {num_samples} --seq-len 1024 --d-model 256 --nhead 4 --num-layers 4 --use-ddim --ddim-steps 50'
         },
         3: {
             "name": "Generate Synthetic (Full Model)",
-            "cmd": f'python sample_diffusion.py --ckpt "{full_ckpt}" --out "{ablation_dir}/synthetic_full_10k.npz" --num-samples {num_samples} --seq-len 1024 --d-model 512 --nhead 8 --num-layers 8 --use-ddim --ddim-steps 50'
+            "cmd": f'python sample_diffusion.py --ckpt "{full_ckpt}" --out "{ablation_dir}/synthetic_full_10k.npz" --num-samples {num_samples} --seq-len 1024 --d-model 256 --nhead 4 --num-layers 4 --use-ddim --ddim-steps 50'
         },
     }
     

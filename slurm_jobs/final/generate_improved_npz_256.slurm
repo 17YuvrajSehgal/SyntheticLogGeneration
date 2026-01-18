@@ -6,8 +6,8 @@
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=8
 #SBATCH --time=02:00:00
-#SBATCH --output=logs/improved_npz_256_%j.out
-#SBATCH --error=logs/improved_npz_256_%j.err
+#SBATCH --output=/scratch/%u/final_logs/improved_npz_256_%j.out
+#SBATCH --error=/scratch/%u/final_logs/improved_npz_256_%j.err
 
 set -euo pipefail
 

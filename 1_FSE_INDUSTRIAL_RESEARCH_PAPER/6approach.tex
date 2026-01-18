@@ -1,0 +1,221 @@
+\section{Approach}
+\label{sec:approach}
+
+\subsection{Data Representation and Preprocessing}
+\label{sec:data-preprocessing}
+
+Our study builds on an existing corpus of real-world kernel execution traces collected using the Linux Tracing Toolkit Next Generation (LTTng). Specifically, we use the dataset introduced by Martin et al.~\cite{martin2017lttng}, which contains execution traces for nine widely used Phoronix benchmarks: \emph{compress-gzip}, \emph{ffmpeg}, \emph{iozone}, \emph{phpbench}, \emph{pybench}, \emph{ramspeed}, \emph{scimark2}, \emph{stream}, and \emph{unpack-linux}. These benchmarks exercise diverse system behaviors, including CPU-intensive, memory-intensive, and I/O-heavy workloads, making them suitable for studying realistic kernel-level activity.
+
+The traces were collected on a desktop-class machine equipped with an x86-64 Xeon E3-1225 processor running at 3.20\,GHz, 32\,GB of memory, SSD storage, and a Gigabit Ethernet connection. For each benchmark, the dataset provides execution traces across three tracing configurations, with 32 independent runs per configuration. In this work, we focus exclusively on the \emph{all-events} configuration, which captures kernel-level events across the entire operating system. We exclude the \emph{libc} configuration, which traces user-space memory-related function calls, as our objective is to model kernel behavior rather than application-level APIs.
+
+\paragraph{Trace Extraction.}
+The original traces are stored in the native LTTng kernel trace format, which is not directly suitable for machine learning workflows. To convert these traces into a more accessible representation, we use the \texttt{babeltrace2} toolchain to decode and dump the binary LTTng traces into human-readable text logs. This step preserves the full event stream while making the data amenable to systematic parsing and transformation.
+
+Each decoded trace consists of a temporally ordered sequence of kernel events. For every event, the log records a high-resolution timestamp, the elapsed time since the previous event, the CPU core on which the event occurred, and event-specific metadata. An excerpt from a decoded trace is shown below for illustration:
+
+\begin{verbatim}
+[08:46:31.491346508] (+?.?????????) flutin kmem_kmalloc:
+{ cpu_id = 1 }, { call_site = 0xFFFFFFFFA09A81A7,
+  ptr = 0xFFFF880789E9B800, bytes_req = 739,
+  bytes_alloc = 1024 }
+
+[08:46:31.491349294] (+0.000002786) flutin kmem_kfree:
+{ cpu_id = 1 }, { call_site = 0xFFFFFFFFA09A827A,
+  ptr = 0xFFFF880789E9B800 }
+
+[08:46:31.491349830] (+0.000000536) flutin sched_waking:
+{ cpu_id = 1 }, { comm = "lttng-consumerd",
+  tid = 2208, prio = 20, target_cpu = 2 }
+\end{verbatim}
+
+\paragraph{Canonical Event Fields.}
+Although individual kernel events expose rich and heterogeneous metadata, directly modeling all fields would be impractical and unnecessary for our objectives. Instead, we extract a canonical set of attributes that are consistently available across events and sufficient to capture execution dynamics:
+(i) the event type (e.g., \texttt{kmem\_kmalloc}, \texttt{sched\_wakeup}),
+(ii) the inter-event time difference, and
+(iii) the CPU identifier.
+These attributes form the basis of our downstream representations and enable scalable modeling across benchmarks and runs.
+
+At this stage, the output of preprocessing is a cleaned, time-ordered textual representation of kernel events, serving as an intermediate format between raw LTTng traces and the machine-learning-ready data structures described next.
+
+
+
+
+
+\subsection{Vocabulary Construction and Structured Storage}
+\label{sec:parquet}
+
+\paragraph{Global Vocabulary Construction.}
+Machine learning models operating on symbolic system traces require a stable and consistent mapping from categorical values to numeric identifiers. To ensure determinism and comparability across benchmarks, runs, and experimental conditions, we construct a \emph{global vocabulary} prior to any downstream modeling.
+
+We scan all decoded text traces from the \emph{all-events} configuration across all benchmarks and runs to extract kernel event names. Event names are parsed directly from each trace line using a fixed regular expression that identifies the kernel event token preceding the payload delimiter (``\texttt{:}''). The first event line of each trace is excluded from vocabulary construction and downstream processing, as its inter-event delta is undefined (denoted by ``\texttt{?}'' in the original traces) and cannot be reliably converted into a numerical time representation.
+
+Each unique event name is assigned a deterministic integer identifier. Event identifiers are ordered by decreasing frequency, such that more common events receive smaller identifiers. This ordering is fixed and reused throughout all experiments, ensuring that models trained on different subsets of the data share an identical semantic encoding of events. In addition to the forward mapping (\texttt{event\_name} $\rightarrow$ \texttt{event\_id}), we retain the inverse mapping for interpretability and post-hoc analysis.
+
+Beyond event names, we construct auxiliary vocabularies for selected high-frequency payload attributes that exhibit categorical structure. In particular, we build vocabularies for process command names (\texttt{comm}) and return values (\texttt{ret}). The \texttt{comm} vocabulary is kept in full due to its limited cardinality, while the \texttt{ret} vocabulary is truncated to the top-$K$ most frequent values to control long-tail sparsity. All vocabularies reserve dedicated tokens for padding and unknown values, and are frozen once constructed to prevent drift across experiments.
+
+\paragraph{Enriched Parquet Representation.}
+To support scalable analysis and efficient training, we convert the decoded text traces into a columnar, organized representation using Apache Parquet. Each trace run is processed independently, resulting in one Parquet file per benchmark run. This design enables embarrassingly parallel preprocessing and avoids cross-run coupling during storage.
+
+We adopt a hybrid schema that balances structural regularity with full trace fidelity. Each event is represented as a single row with three categories of attributes:
+(i) \emph{core fields} that are present for every event,
+(ii) \emph{first-class payload fields} that occur frequently but sparsely, and
+(iii) a catch-all field for all remaining event-specific parameters.
+
+Core fields include the original line index, raw timestamp string, inter-event time delta in seconds, cumulative relative time in nanoseconds, event name, event identifier, and CPU identifier. First-class payload fields capture commonly used parameters such as thread and process identifiers, process command name, return value, file descriptors, filenames, and scheduler state when available. All remaining parameters are serialized into a JSON-encoded dictionary and stored in a dedicated \texttt{extra\_params} column to preserve information completeness without inflating the schema.
+
+During conversion, timestamps are transformed into a strictly monotonic relative time representation by cumulatively summing inter-event deltas. Parsing and serialization are performed in streaming batches to bound memory usage, enabling processing of large traces on commodity hardware. Parquet files are written using dictionary encoding and compression to reduce storage footprint and improve I/O performance.
+
+The resulting Parquet dataset provides a uniform, schema-stable, and scalable foundation for subsequent windowing, modeling, and evaluation stages, while preserving a direct correspondence to the original kernel trace semantics.
+
+
+
+
+
+
+
+
+
+
+\subsection{Windowed Sequence Construction}
+\label{sec:windowing}
+
+The final stage of preprocessing converts the enriched Parquet traces into fixed-length, windowed sequences suitable for deep generative models. Kernel traces are inherently long, variable-length streams, whereas modern sequence models require bounded context lengths and dense tensor representations. To bridge this gap, we segment each trace into overlapping windows and store them in a compressed NumPy-based format.
+
+For each Parquet trace, we extract ordered sequences of event-level attributes and apply feature-specific transformations. Event identifiers and CPU identifiers are preserved as discrete categorical values. Inter-event time deltas are log-normalized using $\log(1 + \Delta t)$ to reduce scale variance while preserving temporal ordering. Thread identifiers are hashed into a fixed number of buckets to retain local thread identity without introducing unbounded cardinality. File descriptors are clamped to a maximum value to control sparsity. Categorical fields such as process command names and return values are mapped using the frozen vocabularies described earlier.
+
+We generate fixed-length windows of length $L$ using a sliding window with fixed stride, producing multiple overlapping sequences from a single execution trace. Each window is stored as a set of aligned tensors, including event identifiers, time deltas, CPU identifiers, thread identifiers, file descriptors, command identifiers, and return-value identifiers. All tensors share the same shape $(N, L)$, where $N$ denotes the number of windows extracted from a trace.
+
+To support experimentation with varying temporal contexts, we materialize multiple windowed datasets with different sequence lengths. This design enables systematic evaluation of short-, medium-, and long-context models without modifying upstream preprocessing logic. The resulting datasets are stored as compressed NumPy archives (\texttt{.npz}), which provide fast loading, low storage overhead, and seamless integration with common machine learning frameworks.
+
+This windowed representation serves as the final machine-learning-ready input for all models evaluated in this work.
+
+
+
+
+
+
+
+
+\subsection{Diffusion Model for Multi-Attribute Kernel Traces}
+\label{sec:diffusion-model}
+
+We model kernel traces as multi-channel sequences, where each position corresponds to a kernel event and its associated attributes (e.g., event type, CPU, thread identifier, and time delta). Our generator is a Transformer-based denoising diffusion probabilistic model (DDPM) that operates in a continuous latent space while supporting both categorical and continuous channels.
+
+\subsubsection{Feature Embedding and Latent Representation}
+\label{sec:feature-embedding}
+
+Let $\mathbf{x}$ denote a windowed trace with length $L$ and a set of channels $\mathcal{C}$ (e.g., \texttt{event}, \texttt{cpu}, \texttt{tid}, \texttt{fd}, \texttt{comm}, \texttt{ret}, and \texttt{dt}). For each discrete channel $c \in \mathcal{C}$, we learn an embedding table $E_c \in \mathbb{R}^{|V_c| \times d}$, where $|V_c|$ is the vocabulary size and $d$ is the model dimension. The continuous time-delta channel \texttt{dt} is projected to $\mathbb{R}^{d}$ via a small MLP. At each sequence position, we form a fused representation by summing the embeddings of all available channels and applying dropout:
+\[
+\mathbf{h}_0[i] = \sum_{c \in \mathcal{C}_{\text{disc}}} E_c(x_c[i]) \;+\; \mathrm{MLP}_{dt}(x_{dt}[i]),
+\quad \mathbf{h}_0 \in \mathbb{R}^{L \times d}.
+\]
+This design treats each attribute as a complementary view of the same underlying system state and yields a single latent sequence suitable for diffusion. The embedder supports a configurable set of channels, enabling feature ablations without changing the model core. 
+
+\subsubsection{Forward Diffusion Process}
+\label{sec:forward-diffusion}
+
+Given the embedded latent sequence $\mathbf{h}_0$, the DDPM forward process progressively corrupts $\mathbf{h}_0$ with Gaussian noise over $T$ diffusion steps. For a timestep $t \in \{0,\dots,T-1\}$, we sample:
+\[
+\mathbf{h}_t = \sqrt{\bar{\alpha}_t}\,\mathbf{h}_0 + \sqrt{1-\bar{\alpha}_t}\,\boldsymbol{\epsilon},
+\quad \boldsymbol{\epsilon} \sim \mathcal{N}(0, I),
+\]
+where $\bar{\alpha}_t = \prod_{s=0}^{t}\alpha_s$ and $\{\alpha_t\}$ are derived from a linear $\beta$-schedule. This standard schedule provides a stable corruption process while preserving training simplicity.
+
+\subsubsection{Transformer Denoiser with Time Conditioning}
+\label{sec:denoiser}
+
+The reverse process is parameterized by a Transformer encoder $\epsilon_{\theta}$ that predicts the injected noise given $(\mathbf{h}_t, t)$. We use sinusoidal timestep embeddings followed by an MLP and add the resulting time vector to all positions as conditioning:
+\[
+\hat{\boldsymbol{\epsilon}} = \epsilon_{\theta}(\mathbf{h}_t, t).
+\]
+Architecturally, the denoiser is a stack of Transformer encoder layers operating on sequences of length $L$ with hidden size $d$, followed by a linear projection back to $\mathbb{R}^{d}$. This design matches the long-range dependency structure of kernel traces, where semantically related events may be separated by hundreds to thousands of steps.
+
+\subsubsection{Training Objective}
+\label{sec:training-objective}
+
+The primary diffusion objective minimizes mean-squared error between true and predicted noise:
+\[
+\mathcal{L}_{\text{latent}} = \left\lVert \hat{\boldsymbol{\epsilon}} - \boldsymbol{\epsilon} \right\rVert_2^2.
+\]
+In addition, because our traces contain multiple categorical channels that must remain semantically consistent (e.g., event types aligned with CPU/thread context), we use an auxiliary reconstruction loss computed from the model's estimate of the clean latent state:
+\[
+\hat{\mathbf{h}}_0 = \frac{\mathbf{h}_t - \sqrt{1-\bar{\alpha}_t}\,\hat{\boldsymbol{\epsilon}}}{\sqrt{\bar{\alpha}_t}}.
+\]
+A feature-specific projection head maps $\hat{\mathbf{h}}_0$ back to per-channel outputs: categorical channels are decoded to logits via linear heads and optimized with cross-entropy, while the continuous \texttt{dt} channel is optimized with MSE. The final objective is:
+\[
+\mathcal{L} = \mathcal{L}_{\text{latent}} + \lambda\,\mathcal{L}_{\text{recon}},
+\]
+where $\lambda$ is a fixed scalar weighting the auxiliary term. This hybrid objective encourages the latent space to retain attribute-specific information throughout diffusion, improving convergence for mixed-modality trace data.
+
+\subsubsection{Sampling and Trace Generation}
+\label{sec:sampling}
+
+To generate synthetic traces, we initialize a latent sequence with i.i.d. Gaussian noise and iteratively apply the reverse diffusion update from $t=T-1$ to $0$. After the final step, we decode each channel from the denoised latent sequence. For discrete channels, we take the argmax over the predicted logits to obtain integer IDs; for \texttt{dt}, we output the predicted continuous values. The generated samples are saved in the same windowed \texttt{.npz} format as the training data, enabling direct evaluation under identical preprocessing and metrics.
+
+\subsubsection{Implementation Notes}
+\label{sec:implementation-notes}
+
+Our implementation is organized into a dataset loader for streaming windowed \texttt{.npz} shards and a modular model consisting of: (i) a multi-channel feature embedder, (ii) a time-conditioned Transformer denoiser, and (iii) per-channel decoding heads. The loader supports configurable channel subsets and sequence lengths, which we use to conduct feature-ablation and context-length studies under a unified training pipeline.
+
+
+
+
+\subsection{Training Procedure}
+\label{sec:training}
+
+All models are trained using a unified training pipeline that operates on windowed NPZ trace shards. Each training run uses the same model architecture, diffusion schedule, optimization strategy, and loss formulation described in the previous sections. This ensures that observed differences across experiments can be attributed solely to changes in input context length rather than confounding implementation factors.
+
+Training proceeds by randomly sampling windowed sequences from the training split and embedding them into a shared latent space. For each mini-batch, a diffusion timestep is sampled uniformly, noise is injected according to the forward diffusion process, and the Transformer denoiser is trained to predict the injected noise. The auxiliary reconstruction loss is computed from the estimated clean latent state and jointly optimized with the diffusion objective.
+
+We train separate models on datasets constructed with different fixed sequence lengths to study the effect of temporal context on generative fidelity. Aside from the sequence length and corresponding batch-size adjustments required to fit available hardware memory, all other training hyperparameters are held constant across runs. This design allows a controlled comparison of short-, medium-, and long-context training regimes within the same methodological framework.
+
+Optimization is performed using AdamW with a cosine learning-rate schedule. Training runs are checkpointed periodically, and the best-performing checkpoints (based on validation loss) are retained for downstream sampling and evaluation. All training jobs are executed in a distributed cluster environment using reproducible job scripts to ensure consistency across runs.
+
+
+\subsection{Constraint Learning, Distance Metrics, and Post-hoc Repair}
+\label{sec:constraints-repair}
+
+Neural generators can produce sequences that appear locally plausible but violate global system invariants, such as impossible event transitions, inconsistent CPU affinity, or implausible timing relationships. To systematically quantify how far synthetic traces deviate from real system behavior, we introduce a constraint-based evaluation layer that measures distances between generated and real traces with respect to learned invariants. These invariants are mined from real traces and stored in a reusable, dataset-level constraint specification (\texttt{constraints\_universal.json}).
+
+\paragraph{Constraint learning.}
+Given a collection of real windowed NPZ shards, the constraint learner scans the full event stream and aggregates statistics over event-local and event-transition patterns. Specifically, it learns four classes of constraints:
+
+\begin{enumerate}
+  \item \textbf{Event transition constraints.} A directed event transition graph $\mathcal{G} = (V, E)$ is constructed, where $V$ corresponds to event types and $(e_i, e_j) \in E$ if event $e_j$ directly follows $e_i$ in at least one real trace.
+  \item \textbf{Temporal constraints.} For each event type $e$, empirical bounds over inter-event time deltas $\Delta t$ are learned, including minimum, maximum, and high-percentile statistics.
+  \item \textbf{CPU affinity constraints.} Global CPU usage distributions and event-conditioned allowed CPU sets are extracted to capture scheduling locality.
+  \item \textbf{Attribute validity constraints.} For each event type, allowed categorical values are learned for thread buckets (\texttt{tid}), file descriptors (\texttt{fd}), process command identifiers (\texttt{comm}), and return values (\texttt{ret}).
+\end{enumerate}
+
+All constraints are stored as event-indexed lookup tables and adjacency lists, together with empirical frequencies that serve as reference distributions.
+
+\paragraph{Universal constraint reference.}
+To ensure consistency across evaluations, all constraints are learned once from the complete real dataset, including training, validation, and test splits across all dataset variants. The resulting \texttt{constraints\_universal.json} serves as a fixed reference that is independent of any particular model, configuration, or experiment.
+
+\paragraph{Constraint-based distance metrics.}
+Given a synthetic trace $\hat{X}$ and the universal constraint reference, we compute a set of constraint-based distance metrics that quantify deviation from real-system behavior.
+
+\emph{Transition distance} is defined as the fraction of adjacent event pairs in $\hat{X}$ that do not appear in the learned transition graph:
+\[
+D_{\text{trans}}(\hat{X}) = 1 - \frac{1}{|\hat{X}|-1} \sum_{t} \mathbb{I}\left[(\hat{e}_t, \hat{e}_{t+1}) \in \mathcal{G}\right].
+\]
+
+\emph{Temporal distance} measures the fraction of events whose inter-event time $\Delta t$ lies outside the learned bounds for the corresponding event type:
+\[
+D_{\text{time}}(\hat{X}) = \frac{1}{|\hat{X}|} \sum_{t} \mathbb{I}\left[\Delta t_t \notin [\min_e, \max_e]\right].
+\]
+
+\emph{CPU affinity distance} is computed as the fraction of events whose assigned CPU violates either global or event-conditioned CPU constraints:
+\[
+D_{\text{cpu}}(\hat{X}) = \frac{1}{|\hat{X}|} \sum_{t} \mathbb{I}\left[\hat{cpu}_t \notin \mathcal{C}_{\hat{e}_t}\right].
+\]
+
+\emph{Attribute validity distance} aggregates violations across categorical attributes (\texttt{tid}, \texttt{fd}, \texttt{comm}, \texttt{ret}) using event-specific allowed sets:
+\[
+D_{\text{attr}}(\hat{X}) = \frac{1}{|\hat{X}|} \sum_{t} \mathbb{I}\left[\exists a \in \mathcal{A} : \hat{a}_t \notin \mathcal{V}_{\hat{e}_t}^{(a)}\right].
+\]
+
+These metrics are reported independently and collectively characterize how far synthetic traces deviate from real execution constraints.
+
+\paragraph{Post-hoc repair.}
+Using the same constraint reference, we implement a post-hoc repair procedure that operates at the event level. For each detected violation, the offending attribute is replaced by sampling from the corresponding allowed set conditioned on the event type. Repair does not modify model parameters and is applied uniformly across configurations. The same constraint-based distances are computed before and after repair to quantify its effect.

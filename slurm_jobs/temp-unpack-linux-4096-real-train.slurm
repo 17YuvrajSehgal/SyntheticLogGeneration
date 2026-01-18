@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=real_baseline_stream_4096
+#SBATCH --job-name=real_baseline_unpack-linux_4096
 #SBATCH --account=def-naser2
 #SBATCH --nodes=1
 #SBATCH --ntasks=1

@@ -5,7 +5,7 @@
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=8
-#SBATCH --time=20:00:00
+#SBATCH --time=24:00:00
 #SBATCH --output=/scratch/%u/improved_baseline_compress-gzip_4096_%j.out
 #SBATCH --error=/scratch/%u/improved_baseline_compress-gzip_4096_%j.err
 

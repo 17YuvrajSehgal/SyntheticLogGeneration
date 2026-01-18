@@ -39,6 +39,20 @@ BATCH_SIZE=64
 EPOCHS=20
 RUN_NAME="improved_ablation_${BENCHMARK}_${CONTEXT_LEN}"
 
+echo ""
+echo "Configuration:"
+echo "  Benchmark: $BENCHMARK"
+echo "  Context Length: $CONTEXT_LEN"
+echo "  Batch Size: $BATCH_SIZE"
+echo "  Epochs: $EPOCHS"
+echo "  Data Root: $DATA_ROOT"
+echo "  Repetition Weight: 0.0 (BASELINE - no repetition loss)"
+echo "  Transition Weight: 0.0 (BASELINE - no transition loss)"
+echo "============================================================"
+echo ""
+
+# Train improved model with weights=0 (baseline comparison)
+echo "Starting training..."
 python train_experiment_better.py \
     --data-root "$DATA_ROOT" \
     --benchmark "$BENCHMARK" \

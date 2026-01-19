@@ -172,7 +172,7 @@ We support two sampling strategies for trace generation.
 \]
 where the noise term is omitted for $t=0$. This requires 1000 denoising steps.
 
-\paragraph{DDIM Fast Sampling.} For efficient generation, we implement DDIM~\cite{song2020denoising}, a deterministic sampling procedure that reduces the number of steps from 1000 to 50 with minimal quality degradation. DDIM uses a non-Markovian reverse process. Given a subsequence of timesteps $\{\tau_1, \ldots, \tau_S\}$ where $S \ll T$, the update rule is:
+\paragraph{DDIM Fast Sampling.} For efficient generation, we implement DDIM, a deterministic sampling procedure that reduces the number of steps from 1000 to 50 with minimal quality degradation. DDIM uses a non-Markovian reverse process. Given a subsequence of timesteps $\{\tau_1, \ldots, \tau_S\}$ where $S \ll T$, the update rule is:
 \[
 \mathbf{h}_{\tau_{i-1}} = \sqrt{\bar{\alpha}_{\tau_{i-1}}} \hat{\mathbf{h}}_0 + \sqrt{1 - \bar{\alpha}_{\tau_{i-1}} - \sigma_i^2} \hat{\boldsymbol{\epsilon}} + \sigma_i \boldsymbol{z},
 \]
@@ -191,13 +191,17 @@ Our implementation consists of three modular components: (i) \texttt{FeatureEmbe
 \subsection{Training Procedure}
 \label{sec:training}
 
-All models are trained using a unified training pipeline that operates on windowed NPZ trace shards. Each training run uses the same model architecture, diffusion schedule, optimization strategy, and loss formulation described in the previous sections. This ensures that observed differences across experiments can be attributed solely to changes in input context length rather than confounding implementation factors.
+All models are trained using a unified training pipeline implemented in \texttt{train\_experiment\_better.py} that operates on windowed NPZ trace shards. Each training run uses the same model architecture, diffusion schedule, optimization strategy, and loss formulation described in the previous sections. This ensures that observed differences across experiments can be attributed solely to changes in input context length rather than confounding implementation factors.
 
-Training proceeds by randomly sampling windowed sequences from the training split and embedding them into a shared latent space. For each mini-batch, a diffusion timestep is sampled uniformly, noise is injected according to the forward diffusion process, and the Transformer denoiser is trained to predict the injected noise. The auxiliary reconstruction loss is computed from the estimated clean latent state and jointly optimized with the diffusion objective.
+\paragraph{Data Loading and Batching.} Training proceeds by streaming windowed sequences from NPZ shards using a custom dataset loader (\texttt{NPZShardDataset}) that supports shard-level caching and multi-worker prefetching. For each mini-batch, sequences are randomly sampled from the training split and embedded into a shared latent space. Batch sizes are adjusted based on sequence length to fit available GPU memory: 64 for $L=256$, 32 for $L=1024$, and 8 for $L=4096$. The loader employs 4 workers with a prefetch factor of 4 and caches up to 8 shards in memory to minimize I/O bottlenecks.
 
-We train separate models on datasets constructed with different fixed sequence lengths to study the effect of temporal context on generative fidelity. Aside from the sequence length and corresponding batch-size adjustments required to fit available hardware memory, all other training hyperparameters are held constant across runs. This design allows a controlled comparison of short-, medium-, and long-context training regimes within the same methodological framework.
+\paragraph{Optimization Strategy.} We use the AdamW optimizer with an initial learning rate of $2 \times 10^{-4}$ and a cosine annealing schedule over the full training duration. For each mini-batch, a diffusion timestep $t$ is sampled uniformly from $\{0, \ldots, T-1\}$, noise is injected according to the forward diffusion process, and the Transformer denoiser is trained to predict the injected noise. The multi-objective loss (latent + reconstruction + repetition + transition) is computed and backpropagated. Gradient norms are monitored and logged to TensorBoard for stability analysis.
 
-Optimization is performed using AdamW with a cosine learning-rate schedule. Training runs are checkpointed periodically, and the best-performing checkpoints (based on validation loss) are retained for downstream sampling and evaluation. All training jobs are executed in a distributed cluster environment using reproducible job scripts to ensure consistency across runs.
+\paragraph{Training Configuration.} We train for 20--100 epochs depending on dataset size and convergence behavior. Models are checkpointed after each epoch, and validation loss is computed on a held-out validation set (50 batches) to monitor overfitting. Early stopping is not employed; instead, we retain all checkpoints and select the best-performing one based on validation loss for downstream evaluation. Training employs mixed-precision computation (FP16 or BF16) when available to accelerate training and reduce memory footprint.
+
+\paragraph{Monitoring and Logging.} All training runs are logged to TensorBoard with comprehensive metrics including: (i) training loss components (latent, reconstruction, repetition, transition), (ii) gradient norms, (iii) learning rate, (iv) per-channel reconstruction losses, (v) predicted vs. target repetition counts, and (vi) validation metrics. This enables detailed analysis of training dynamics and identification of convergence issues.
+
+\paragraph{Reproducibility.} All training jobs are executed on a distributed cluster environment (Compute Canada) using Slurm job scripts with fixed random seeds. Hyperparameters are held constant across runs except for sequence length and corresponding batch size adjustments. This design allows controlled comparison of short-, medium-, and long-context training regimes within the same methodological framework.
 
 
 \subsection{Constraint Learning, Distance Metrics, and Post-hoc Repair}
@@ -206,16 +210,17 @@ Optimization is performed using AdamW with a cosine learning-rate schedule. Trai
 Neural generators can produce sequences that appear locally plausible but violate global system invariants, such as impossible event transitions, inconsistent CPU affinity, or implausible timing relationships. To systematically quantify how far synthetic traces deviate from real system behavior, we introduce a constraint-based evaluation layer that measures distances between generated and real traces with respect to learned invariants. These invariants are mined from real traces and stored in a reusable, dataset-level constraint specification (\texttt{constraints\_universal.json}).
 
 \paragraph{Constraint learning.}
-Given a collection of real windowed NPZ shards, the constraint learner scans the full event stream and aggregates statistics over event-local and event-transition patterns. Specifically, it learns four classes of constraints:
+Given a collection of real windowed NPZ shards, the constraint learner (\texttt{learn\_constraints.py}) scans the full event stream and aggregates statistics over event-local and event-transition patterns using parallel processing. The learning procedure employs multiprocessing with up to 32 workers to process shards concurrently, extracting partial constraints from each shard and aggregating results globally. Specifically, it learns four classes of constraints:
 
 \begin{enumerate}
-  \item \textbf{Event transition constraints.} A directed event transition graph $\mathcal{G} = (V, E)$ is constructed, where $V$ corresponds to event types and $(e_i, e_j) \in E$ if event $e_j$ directly follows $e_i$ in at least one real trace.
-  \item \textbf{Temporal constraints.} For each event type $e$, empirical bounds over inter-event time deltas $\Delta t$ are learned, including minimum, maximum, and high-percentile statistics.
-  \item \textbf{CPU affinity constraints.} Global CPU usage distributions and event-conditioned allowed CPU sets are extracted to capture scheduling locality.
-  \item \textbf{Attribute validity constraints.} For each event type, allowed categorical values are learned for thread buckets (\texttt{tid}), file descriptors (\texttt{fd}), process command identifiers (\texttt{comm}), and return values (\texttt{ret}).
+  \item \textbf{Event transition constraints.} A directed event transition graph $\mathcal{G} = (V, E)$ is constructed, where $V$ corresponds to event types and $(e_i, e_j) \in E$ if event $e_j$ directly follows $e_i$ in at least one real trace. The adjacency list representation stores all observed successors for each event type.
+  \item \textbf{Temporal constraints.} For each event type $e$, empirical bounds over inter-event time deltas $\Delta t$ are learned by collecting all observed time deltas, computing minimum and maximum values, and storing the complete set of observed values as an allowed set: $\{\Delta t_{\min}^{(e)}, \Delta t_{\max}^{(e)}, \mathcal{T}_e\}$.
+  \item \textbf{CPU affinity constraints.} Global CPU usage distributions and event-conditioned allowed CPU sets $\mathcal{C}_e$ are extracted to capture scheduling locality. For each event type, the set of CPUs on which it was observed is recorded.
+  \item \textbf{Attribute validity constraints.} For each event type, allowed categorical values are learned for thread buckets (\texttt{tid}), file descriptors (\texttt{fd}), process command identifiers (\texttt{comm}), and return values (\texttt{ret}) by collecting all observed values across the dataset.
+  \item \textbf{Event frequency distribution.} Empirical probabilities $P(e)$ are computed by counting event occurrences and normalizing by total event count. These probabilities are used during probabilistic repair to sample replacements that match the real data distribution.
 \end{enumerate}
 
-All constraints are stored as event-indexed lookup tables and adjacency lists, together with empirical frequencies that serve as reference distributions.
+All constraints are stored as event-indexed lookup tables and adjacency lists in JSON format (\texttt{constraints\_universal.json}), together with empirical frequencies that serve as reference distributions for repair.
 
 \paragraph{Universal constraint reference.}
 To ensure consistency across evaluations, all constraints are learned once from the complete real dataset, including training, validation, and test splits across all dataset variants. The resulting \texttt{constraints\_universal.json} serves as a fixed reference that is independent of any particular model, configuration, or experiment.
@@ -246,4 +251,10 @@ D_{\text{attr}}(\hat{X}) = \frac{1}{|\hat{X}|} \sum_{t} \mathbb{I}\left[\exists 
 These metrics are reported independently and collectively characterize how far synthetic traces deviate from real execution constraints.
 
 \paragraph{Post-hoc repair.}
-Using the same constraint reference, we implement a post-hoc repair procedure that operates at the event level. For each detected violation, the offending attribute is replaced by sampling from the corresponding allowed set conditioned on the event type. Repair does not modify model parameters and is applied uniformly across configurations. The same constraint-based distances are computed before and after repair to quantify its effect.
+Using the same constraint reference, we implement a greedy forward repair procedure (\texttt{repair.py}) that operates sequentially on each trace. The repair algorithm processes traces in two passes:
+
+\textbf{Pass 1: Event Transition Repair.} For each position $t$ in the sequence, we check if the transition $(e_t, e_{t+1})$ exists in the learned transition graph $\mathcal{G}$. If the transition is invalid (i.e., $(e_t, e_{t+1}) \notin \mathcal{G}$), we replace $e_{t+1}$ with a valid successor sampled probabilistically from the allowed set $\mathcal{G}(e_t)$ using event frequency weights $P(e)$. This ensures that repaired transitions not only satisfy validity constraints but also match the empirical distribution of real traces. When an event is replaced, its associated time delta is also updated by sampling from the allowed time delta set $\mathcal{T}_{e_{t+1}}$ for the new event.
+
+\textbf{Pass 2: CPU Affinity Repair.} For each event $e_t$, we verify that the assigned CPU $c_t$ belongs to the event-conditioned allowed set $\mathcal{C}_{e_t}$. If $c_t \notin \mathcal{C}_{e_t}$, we replace it with a randomly sampled CPU from $\mathcal{C}_{e_t}$. This ensures that events are scheduled on CPUs where they were observed in real traces.
+
+Repair does not modify model parameters and is applied uniformly as a post-processing step across all configurations. The same constraint-based distance metrics are computed before and after repair to quantify repair effectiveness. Repaired traces are saved in the same NPZ format, enabling direct evaluation in downstream tasks.

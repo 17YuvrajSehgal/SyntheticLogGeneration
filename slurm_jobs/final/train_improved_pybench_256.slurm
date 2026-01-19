@@ -72,8 +72,9 @@ python train_experiment_better.py \
     --d-model 256 \
     --nhead 4 \
     --num-layers 4 \
-    --repetition-weight 1.0 \
-    --transition-weight 0.5 \
+    --repetition-weight 0.0 \
+    --transition-weight 0.0 \
+    --lr 2e-4 \
     --mixed-precision bf16 \
     --log-dir logs_tensorboard \
     --run-name "$RUN_NAME" \

@@ -4,7 +4,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
-#SBATCH --time=02:00:00
+#SBATCH --time=00:30:00
 #SBATCH --output=/scratch/%u/final_logs/improved_npz_4096_%j.out
 #SBATCH --error=/scratch/%u/final_logs/improved_npz_4096_%j.err
 

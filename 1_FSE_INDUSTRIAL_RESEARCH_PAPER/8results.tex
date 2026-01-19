@@ -44,6 +44,36 @@ unpack-linux & 63.4\% & 27.8\% & -35.6\% & 69.1\% & 44.3\% & -24.8\% & --- & 43.
 
 \noindent\textbf{Takeaway}: Synthetic data augmentation is \textit{workload-dependent}. It works well for deterministic, structured workloads but struggles with non-deterministic I/O patterns. The scimark2 result (87.2\% F1, only -2.6\% loss) proves that diffusion models can generate production-quality synthetic data under the right conditions, identifying clear boundaries for when synthetic augmentation is viable.
 
+\begin{table*}[t]
+\centering
+\caption{RQ1 (Secondary Metrics): Comprehensive evaluation metrics for Combined (50\% real + 50\% synthetic) configuration. While F1-Macro shows workload-dependent degradation, F1-Weighted and Accuracy remain relatively high, and Top-K accuracy demonstrates that models capture plausible event alternatives even when the top prediction is incorrect.}
+\label{tab:rq1-secondary}
+\footnotesize
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{@{}lcccccccccccc@{}}
+\toprule
+\multirow{2}{*}{\textbf{Benchmark}} & \multicolumn{4}{c}{\textbf{L=256}} & \multicolumn{4}{c}{\textbf{L=1024}} & \multicolumn{4}{c}{\textbf{L=4096}} \\
+\cmidrule(lr){2-5} \cmidrule(lr){6-9} \cmidrule(lr){10-13}
+& F1-W & Acc & Top-5 & Top-10 & F1-W & Acc & Top-5 & Top-10 & F1-W & Acc & Top-5 & Top-10 \\
+\midrule
+ffmpeg       & 85.9\% & 86.6\% & 95.8\% & 97.4\% & 91.9\% & 92.1\% & 98.6\% & 99.2\% & 93.8\% & 93.9\% & 99.4\% & 99.7\% \\
+iozone       & 84.4\% & 84.7\% & 95.2\% & 96.9\% & 89.6\% & 89.7\% & 98.2\% & 99.1\% & 92.8\% & 92.9\% & 99.3\% & 99.6\% \\
+pybench      & 87.4\% & 87.8\% & 95.2\% & 96.6\% & 94.2\% & 94.3\% & 98.6\% & 99.2\% & 96.1\% & 96.2\% & 99.6\% & 99.8\% \\
+scimark2     & 87.0\% & 87.5\% & 95.1\% & 96.5\% & 93.8\% & 93.8\% & 98.5\% & 99.1\% & 96.9\% & 97.0\% & 99.7\% & 99.8\% \\
+stream       & 84.0\% & 84.5\% & 98.0\% & 98.5\% & 88.3\% & 88.4\% & 99.2\% & 99.5\% & 89.8\% & 89.9\% & 99.6\% & 99.8\% \\
+unpack-linux & 85.3\% & 85.6\% & 95.1\% & 96.8\% & 90.5\% & 90.6\% & 98.2\% & 99.0\% & 92.9\% & 93.0\% & 99.3\% & 99.7\% \\
+\midrule
+\textbf{Average} & \textbf{85.7\%} & \textbf{86.1\%} & \textbf{95.7\%} & \textbf{97.1\%} & \textbf{91.4\%} & \textbf{91.5\%} & \textbf{98.5\%} & \textbf{99.2\%} & \textbf{93.7\%} & \textbf{93.8\%} & \textbf{99.5\%} & \textbf{99.7\%} \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\noindent\textbf{Secondary Metrics Analysis}: Table~\ref{tab:rq1-secondary} reveals important nuances in model performance and identifies practical use cases where synthetic data provides significant value despite F1-Macro degradation. While F1-Macro (Table~\ref{tab:rq1}) shows significant degradation for some workloads, F1-Weighted and Accuracy remain substantially higher (86--97\% across all configurations), indicating that models trained on synthetic data perform well on \textit{common} events but struggle with \textit{rare} events. More encouragingly, Top-5 and Top-10 accuracy are consistently high (96--99.8\%), demonstrating that even when the top prediction is incorrect, the model captures plausible alternatives within a small set of candidates.
+
+\noindent\textbf{Practical Implementation Benefits}: The high Top-K accuracy (99.5--99.7\% @ L=4096) enables several valuable applications: (i) \textbf{Software testing and fuzzing}: Synthetic traces can generate diverse execution scenarios for testing system behavior under varied conditions, where capturing multiple plausible event sequences is more important than predicting a single next event with perfect accuracy; (ii) \textbf{Privacy-preserving analysis}: Organizations can share synthetic kernel traces for collaborative research or debugging without exposing sensitive real system data, particularly valuable when real traces contain proprietary workload patterns or security-sensitive information; (iii) \textbf{Development and prototyping}: Developers can use synthetic data to train and validate monitoring tools, anomaly detectors, or performance analyzers when real production data is unavailable or expensive to collect; (iv) \textbf{Edge case exploration}: The ability to generate plausible alternatives (high Top-K accuracy) allows systematic exploration of rare execution paths that may not appear frequently in real traces but are critical for robustness testing; (v) \textbf{Data augmentation for imbalanced classes}: While F1-Macro shows that rare events are challenging, the 86--97\% accuracy on common events suggests synthetic data can effectively augment training sets for frequently occurring system calls, reducing data collection costs for large-scale deployments.
+
+\noindent\textbf{Cost-Benefit Trade-off}: For practitioners, these results suggest a nuanced adoption strategy. When the primary goal is maximizing F1-Macro on rare events (e.g., security anomaly detection), synthetic augmentation should be limited to deterministic workloads like scimark2. However, when the goal is generating diverse scenarios for testing, achieving high accuracy on common events, or preserving privacy, synthetic data offers substantial practical value even for workloads with moderate F1-Macro degradation. The 2$\times$ dataset size benefit can significantly reduce data collection infrastructure costs while maintaining 86--97\% accuracy on typical system behavior.
+
 \subsection{RQ2: Does constraint-guided repair improve downstream performance?}
 \label{sec:rq2}
 

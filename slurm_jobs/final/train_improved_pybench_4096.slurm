@@ -5,7 +5,7 @@
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=8
-#SBATCH --time=3:00:00
+#SBATCH --time=1:00:00
 #SBATCH --output=/scratch/%u/final_logs/train_improved_pybench_4096_%j.out
 #SBATCH --error=/scratch/%u/final_logs/train_improved_pybench_4096_%j.err
 

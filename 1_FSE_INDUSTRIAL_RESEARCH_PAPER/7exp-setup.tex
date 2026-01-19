@@ -112,50 +112,7 @@ To evaluate the utility of synthetic data, we employ a next-event prediction tas
 
 \paragraph{Training Configuration.} Predictors are trained for up to 20 epochs using AdamW ($\text{lr}=10^{-4}$) with cross-entropy loss. Training employs sliding windows with stride 64 over sequences, batch size 64, and early stopping with patience 3 based on validation F1-macro score. The best checkpoint is selected for final evaluation.
 
-\paragraph{Evaluation Metrics.} We evaluate downstream predictor performance using six complementary metrics, each capturing different aspects of prediction quality. All metrics are computed on the held-out real test set to measure how well models trained on synthetic data generalize to real system behavior.
 
-\textbf{F1-Score (Macro).} Our primary metric is the macro-averaged F1-score, which treats all event classes equally regardless of frequency. For each event class $c$, we compute precision and recall:
-\[
-\text{Precision}_c = \frac{\text{TP}_c}{\text{TP}_c + \text{FP}_c}, \quad
-\text{Recall}_c = \frac{\text{TP}_c}{\text{TP}_c + \text{FN}_c},
-\]
-where $\text{TP}_c$, $\text{FP}_c$, and $\text{FN}_c$ denote true positives, false positives, and false negatives for class $c$. The per-class F1-score is the harmonic mean:
-\[
-\text{F1}_c = 2 \cdot \frac{\text{Precision}_c \cdot \text{Recall}_c}{\text{Precision}_c + \text{Recall}_c}.
-\]
-The macro-averaged F1-score is the unweighted mean across all $N=384$ event classes:
-\[
-\text{F1-macro} = \frac{1}{N} \sum_{c=1}^{N} \text{F1}_c.
-\]
-We select F1-macro as our primary metric because kernel traces exhibit severe class imbalance: common events (e.g., scheduler switches, memory allocations) occur orders of magnitude more frequently than rare but critical events (e.g., errors, security violations, I/O failures). Macro-averaging ensures that rare events contribute equally to the overall score, preventing models from achieving high accuracy by simply predicting frequent classes while ignoring rare but operationally significant events.
-
-\textbf{F1-Score (Weighted).} As a secondary metric, we report weighted F1-score, which averages per-class F1 scores weighted by class support (number of true instances):
-\[
-\text{F1-weighted} = \frac{1}{|\mathcal{D}|} \sum_{c=1}^{N} n_c \cdot \text{F1}_c,
-\]
-where $n_c$ is the number of test samples with true label $c$ and $|\mathcal{D}|$ is the total test set size. This metric reflects overall prediction quality while accounting for class distribution, providing a complementary view to macro-averaging.
-
-\textbf{Accuracy.} We report standard classification accuracy, defined as the fraction of correct predictions:
-\[
-\text{Accuracy} = \frac{1}{|\mathcal{D}|} \sum_{i=1}^{|\mathcal{D}|} \mathbb{I}[\hat{y}_i = y_i],
-\]
-where $\hat{y}_i$ and $y_i$ are the predicted and true labels. While accuracy is intuitive, it can be misleading under class imbalance, as models can achieve high accuracy by overpredicting frequent classes.
-
-\textbf{Top-K Accuracy.} To assess whether the model captures plausible alternatives even when the top prediction is incorrect, we compute top-5 and top-10 accuracy:
-\[
-\text{Top-K Acc} = \frac{1}{|\mathcal{D}|} \sum_{i=1}^{|\mathcal{D}|} \mathbb{I}[y_i \in \text{TopK}(\mathbf{p}_i)],
-\]
-where $\text{TopK}(\mathbf{p}_i)$ denotes the set of $K$ event classes with highest predicted probabilities for sample $i$. These metrics are particularly relevant for kernel traces, where multiple valid next events may exist depending on runtime conditions (e.g., different scheduler decisions, I/O completion ordering).
-
-\textbf{Cross-Entropy Loss.} We report the average cross-entropy loss to quantify prediction confidence:
-\[
-\text{Loss} = -\frac{1}{|\mathcal{D}|} \sum_{i=1}^{|\mathcal{D}|} \log p(y_i \mid \mathbf{x}_i),
-\]
-where $p(y_i \mid \mathbf{x}_i)$ is the predicted probability of the true class. Lower loss indicates higher confidence in correct predictions, complementing discrete accuracy metrics with a continuous measure of prediction quality.
-
-\paragraph{Experimental Configurations.} For each diffusion model configuration, we train downstream predictors on four datasets: (i) \textbf{Real only}---baseline using only real training data, (ii) \textbf{Synthetic only}---trained entirely on synthetic data, (iii) \textbf{Combined (repaired)}---50/50 mix of real and constraint-repaired synthetic data, and (iv) \textbf{Combined (no repair)}---50/50 mix of real and raw synthetic data. All predictors are evaluated on the same held-out real test set to measure synthetic data utility.
-
-\subsection{Training Dynamics}
 
 %Training progress is monitored using TensorBoard, tracking the total diffusion loss as well as its latent and reconstruction components. Figure~\ref{fig:training-curves} shows representative training curves with and without exponential smoothing, demonstrating stable optimization and consistent convergence across all loss components.
 %

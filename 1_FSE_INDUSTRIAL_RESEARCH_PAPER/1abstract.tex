@@ -1,5 +1,8 @@
 % ---------- Abstract ----------
 \begin{abstract}
-Industrial context (1--2 sentences). Problem statement and why it matters (1--2).
-Approach/solution summary (2--3). Key results (1--2). Practical implications (1).
+Machine learning models for system behavior analysis require large volumes of training data, yet collecting kernel execution traces from production systems is expensive and often infeasible due to privacy constraints. We present a diffusion-based approach for generating synthetic kernel traces that can augment or replace real data. Our multi-channel diffusion model jointly generates six correlated trace attributes in a unified latent space, coupled with a constraint-guided repair mechanism that ensures 100\% structural validity.
+
+We evaluate our approach on nine diverse Phoronix benchmarks using next-event prediction as a proxy for synthetic data quality. For deterministic workloads, synthetic augmentation achieves 87.2\% F1-Macro---only 2.6 percentage points below real-only baselines---demonstrating production viability. Context length emerges as the dominant quality factor, with L=4096 doubling average performance (+104\% relative gain). Ablation studies show that 2-channel models achieve comparable quality to 6-channel models while requiring only 33\% of computational resources.
+
+Our findings provide actionable guidance for practitioners: synthetic data is viable for deterministic workloads when using sufficient context (L=4096) and constraint repair, enabling organizations to double training dataset size with minimal quality loss. Even for challenging I/O-heavy workloads, high Top-K accuracy (96--99.8\%) enables valuable use cases including software testing, privacy-preserving trace sharing, and development prototyping.
 \end{abstract}

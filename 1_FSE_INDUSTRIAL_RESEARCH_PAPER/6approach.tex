@@ -132,12 +132,7 @@ where the noise term is omitted for $t=0$. This requires 1000 denoising steps.
 \]
 where $\hat{\mathbf{h}}_0 = (\mathbf{h}_{\tau_i} - \sqrt{1-\bar{\alpha}_{\tau_i}} \hat{\boldsymbol{\epsilon}}) / \sqrt{\bar{\alpha}_{\tau_i}}$ and \newline $\sigma_i = \eta \sqrt{(1-\bar{\alpha}_{\tau_{i-1}})/(1-\bar{\alpha}_{\tau_i})} \sqrt{1 - \bar{\alpha}_{\tau_i}/\bar{\alpha}_{\tau_{i-1}}}$. Setting $\eta=0$ yields fully deterministic sampling. This achieves a 20$\times$ speedup over standard DDPM sampling.
 
-After the final denoising step, we decode each channel from the denoised latent sequence $\mathbf{h}_0$. For discrete channels, we apply argmax over predicted logits to obtain integer IDs; for \texttt{dt}, we directly output the predicted continuous values. Generated samples are saved in the same windowed \texttt{.npz} format as training data, enabling direct evaluation under identical preprocessing pipelines.
-
-\subsubsection{Implementation Details}
-\label{sec:implementation-notes}
-
-Our implementation consists of three modular components: (i) \texttt{FeatureEmbedder}---a multi-channel embedding layer that maps discrete and continuous inputs to a unified latent space, (ii) \texttt{TransformerDenoiser}---a time-conditioned Transformer encoder that predicts noise, and (iii) \texttt{FeatureUnembedder}---per-channel linear heads that decode latent states to channel-specific outputs. The data loader streams windowed \texttt{.npz} shards and supports configurable channel subsets and sequence lengths, enabling feature ablation and context-length studies within a unified training pipeline. All models are trained using AdamW optimization with a cosine learning rate schedule.
+After the final denoising step, we decode each channel from the denoised latent sequence $\mathbf{h}_0$. For discrete channels, we apply argmax over predicted logits to obtain integer IDs; for \texttt{dt}, we directly output the predicted continuous values.
 
 
 
@@ -145,17 +140,11 @@ Our implementation consists of three modular components: (i) \texttt{FeatureEmbe
 \subsection{Training Procedure}
 \label{sec:training}
 
-All models are trained using a unified training pipeline implemented in \texttt{train\_experiment\_better.py} that operates on windowed NPZ trace shards. Each training run uses the same model architecture, diffusion schedule, optimization strategy, and loss formulation described in the previous sections. This ensures that observed differences across experiments can be attributed solely to changes in input context length rather than confounding implementation factors.
+All models are trained using a unified pipeline with the same architecture, diffusion schedule, optimization strategy, and loss formulation. This ensures that observed differences across experiments can be attributed solely to changes in input context length.
 
-\paragraph{Data Loading and Batching.} Training proceeds by streaming windowed sequences from NPZ shards using a custom dataset loader (\texttt{NPZShardDataset}) that supports shard-level caching and multi-worker prefetching. For each mini-batch, sequences are randomly sampled from the training split and embedded into a shared latent space. Batch sizes are adjusted based on sequence length to fit available GPU memory: 64 for $L=256$, 64 for $L=1024$, and 8 for $L=4096$. The loader employs 4 workers with a prefetch factor of 4 and caches up to 8 shards in memory to minimize I/O bottlenecks.
+We use the AdamW optimizer with an initial learning rate of $2 \times 10^{-4}$ and a cosine annealing schedule. For each mini-batch, a diffusion timestep $t$ is sampled uniformly from $\{0, \ldots, T-1\}$, noise is injected according to the forward diffusion process, and the Transformer denoiser is trained to predict the injected noise. The multi-objective loss (latent + reconstruction + repetition + transition) is computed and backpropagated. Batch sizes are adjusted based on sequence length to fit GPU memory: 64 for $L=256$, 64 for $L=1024$, and 8 for $L=4096$.
 
-\paragraph{Optimization Strategy.} We use the AdamW optimizer with an initial learning rate of $2 \times 10^{-4}$ and a cosine annealing schedule over the full training duration. For each mini-batch, a diffusion timestep $t$ is sampled uniformly from $\{0, \ldots, T-1\}$, noise is injected according to the forward diffusion process, and the Transformer denoiser is trained to predict the injected noise. The multi-objective loss (latent + reconstruction + repetition + transition) is computed and backpropagated. Gradient norms are monitored and logged to TensorBoard for stability analysis.
-
-\paragraph{Training Configuration.} We train for 20--100 epochs depending on dataset size and convergence behavior. Models are checkpointed after each epoch, and validation loss is computed on a held-out validation set (50 batches) to monitor overfitting. Early stopping is not employed; instead, we retain all checkpoints and select the best-performing one based on validation loss for downstream evaluation. Training employs mixed-precision computation (FP16 or BF16) when available to accelerate training and reduce memory footprint.
-
-\paragraph{Monitoring and Logging.} All training runs are logged to TensorBoard with comprehensive metrics including: (i) training loss components (latent, reconstruction, repetition, transition), (ii) gradient norms, (iii) learning rate, (iv) per-channel reconstruction losses, (v) predicted vs. target repetition counts, and (vi) validation metrics. This enables detailed analysis of training dynamics and identification of convergence issues.
-
-\paragraph{Reproducibility.} All training jobs are executed on a distributed cluster environment (Compute Canada) using Slurm job scripts with fixed random seeds. Hyperparameters are held constant across runs except for sequence length and corresponding batch size adjustments. This design allows controlled comparison of short-, medium-, and long-context training regimes within the same methodological framework.
+We train for 20 epochs depending on dataset size and convergence behavior. Models are checkpointed after each epoch, and validation loss is computed on a held-out validation set to monitor overfitting. We select the best-performing checkpoint based on validation loss for downstream evaluation. Training employs mixed-precision computation when available to accelerate training. All experiments use fixed random seeds, with hyperparameters held constant across runs except for sequence length and corresponding batch size adjustments.
 
 
 \subsection{Constraint Learning, Distance Metrics, and Post-hoc Repair}

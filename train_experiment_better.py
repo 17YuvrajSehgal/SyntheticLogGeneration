@@ -7,8 +7,8 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
 
-# Import IMPROVED model
-from synthetic_log_gen.data.dataset import make_dataloaders, SampleConfig, ALL_CHANNELS
+# Import IMPROVED model and IMPROVED dataset loader
+from synthetic_log_gen.data.dataset_improved import make_dataloaders_improved, SampleConfig, ALL_CHANNELS
 from synthetic_log_gen.models.diffusion_better import LogDiffusionModelBetter
 
 def get_vocab_sizes(vocab_dir, args):
@@ -133,14 +133,16 @@ def main():
         return_dict=True
     )
     
-    train_dl, val_dl, test_dl = make_dataloaders(
+    train_dl, val_dl, test_dl = make_dataloaders_improved(
         root_dir=args.data_root,
         benchmark=args.benchmark,
         batch_size=args.batch_size,
         num_workers=args.num_workers,
         config=cfg,
         prefetch_factor=4,
-        cache_shards=8
+        cache_shards=10,  # Improved: cache more shards
+        use_mmap=True,    # Improved: use memory mapping
+        profile=False     # Set to True to see cache hit rates
     )
     
     # 2. Setup Model

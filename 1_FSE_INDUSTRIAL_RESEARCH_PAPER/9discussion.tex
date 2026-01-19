@@ -1,7 +1,14 @@
 \section{Discussion}
 \label{sec:discussion}
 
-We synthesize findings from our four research questions to provide actionable insights for practitioners and identify opportunities for future research.
+We synthesize findings from our four research questions to provide actionable insights for practitioners and identify opportunities for future research. Figure~\ref{fig:unified-landscape} provides a comprehensive overview of key findings across all RQs.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\columnwidth]{figures/cross_rq_plot12_unified_landscape.png}
+\caption{Unified Performance Landscape showing key findings from all four research questions. (A) Workload Dependence (RQ1): scimark2 and pybench achieve near-parity with real data, while I/O-heavy workloads show significant degradation. (B) Repair Effectiveness (RQ2): Constraint-guided repair provides consistent improvements, especially at shorter context lengths. (C) Context Scaling (RQ3): All benchmarks benefit from longer context, with scimark2 showing +46.6\% improvement from L=256 to L=4096. (D) Model Simplification (RQ4): Base 2-channel model achieves 97\% of Full 6-channel performance for scimark2.}
+\label{fig:unified-landscape}
+\end{figure}
 
 \subsection{Workload-Dependent Synthetic Data Quality}\label{subsec:workload-dependent-synthetic-data-quality}
 

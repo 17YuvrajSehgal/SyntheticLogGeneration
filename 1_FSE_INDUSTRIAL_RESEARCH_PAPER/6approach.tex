@@ -100,58 +100,90 @@ We model kernel traces as multi-channel sequences, where each position correspon
 \subsubsection{Feature Embedding and Latent Representation}
 \label{sec:feature-embedding}
 
-Let $\mathbf{x}$ denote a windowed trace with length $L$ and a set of channels $\mathcal{C}$ (e.g., \texttt{event}, \texttt{cpu}, \texttt{tid}, \texttt{fd}, \texttt{comm}, \texttt{ret}, and \texttt{dt}). For each discrete channel $c \in \mathcal{C}$, we learn an embedding table $E_c \in \mathbb{R}^{|V_c| \times d}$, where $|V_c|$ is the vocabulary size and $d$ is the model dimension. The continuous time-delta channel \texttt{dt} is projected to $\mathbb{R}^{d}$ via a small MLP. At each sequence position, we form a fused representation by summing the embeddings of all available channels and applying dropout:
+Let $\mathbf{x}$ denote a windowed trace with length $L$ and a set of channels $\mathcal{C}$ (e.g., \texttt{event}, \texttt{cpu}, \texttt{tid}, \texttt{fd}, \texttt{comm}, \texttt{ret}, and \texttt{dt}). For each discrete channel $c \in \mathcal{C}_{\text{disc}}$, we learn an embedding table $E_c \in \mathbb{R}^{|V_c| \times d}$, where $|V_c|$ is the vocabulary size and $d$ is the model dimension (set to 256 in our experiments). The continuous time-delta channel \texttt{dt} is projected to $\mathbb{R}^{d}$ via a two-layer MLP with SiLU activation. At each sequence position, we form a fused representation by summing the embeddings of all available channels and applying dropout:
 \[
-\mathbf{h}_0[i] = \sum_{c \in \mathcal{C}_{\text{disc}}} E_c(x_c[i]) \;+\; \mathrm{MLP}_{dt}(x_{dt}[i]),
+\mathbf{h}_0[i] = \sum_{c \in \mathcal{C}_{\text{disc}}} E_c(x_c[i]) \;+\; \mathrm{MLP}_{\text{dt}}(x_{\text{dt}}[i]),
 \quad \mathbf{h}_0 \in \mathbb{R}^{L \times d}.
 \]
-This design treats each attribute as a complementary view of the same underlying system state and yields a single latent sequence suitable for diffusion. The embedder supports a configurable set of channels, enabling feature ablations without changing the model core. 
+This additive fusion design treats each attribute as a complementary view of the same underlying system state and yields a single unified latent sequence suitable for diffusion. The embedder supports configurable channel subsets, enabling feature ablations without modifying the model core.
 
 \subsubsection{Forward Diffusion Process}
 \label{sec:forward-diffusion}
 
-Given the embedded latent sequence $\mathbf{h}_0$, the DDPM forward process progressively corrupts $\mathbf{h}_0$ with Gaussian noise over $T$ diffusion steps. For a timestep $t \in \{0,\dots,T-1\}$, we sample:
+Given the embedded latent sequence $\mathbf{h}_0$, the DDPM forward process progressively corrupts $\mathbf{h}_0$ with Gaussian noise over $T=1000$ diffusion steps. For a timestep $t \in \{0,\dots,T-1\}$, we sample:
 \[
 \mathbf{h}_t = \sqrt{\bar{\alpha}_t}\,\mathbf{h}_0 + \sqrt{1-\bar{\alpha}_t}\,\boldsymbol{\epsilon},
 \quad \boldsymbol{\epsilon} \sim \mathcal{N}(0, I),
 \]
-where $\bar{\alpha}_t = \prod_{s=0}^{t}\alpha_s$ and $\{\alpha_t\}$ are derived from a linear $\beta$-schedule. This standard schedule provides a stable corruption process while preserving training simplicity.
+where $\bar{\alpha}_t = \prod_{s=0}^{t}\alpha_s$ and $\alpha_t = 1 - \beta_t$ with $\{\beta_t\}$ following a linear schedule from $\beta_{\text{start}}=10^{-4}$ to $\beta_{\text{end}}=0.02$. This standard schedule provides stable corruption while preserving training simplicity.
 
 \subsubsection{Transformer Denoiser with Time Conditioning}
 \label{sec:denoiser}
 
-The reverse process is parameterized by a Transformer encoder $\epsilon_{\theta}$ that predicts the injected noise given $(\mathbf{h}_t, t)$. We use sinusoidal timestep embeddings followed by an MLP and add the resulting time vector to all positions as conditioning:
+The reverse process is parameterized by a Transformer encoder $\epsilon_{\theta}$ that predicts the injected noise given $(\mathbf{h}_t, t)$. We use sinusoidal timestep embeddings of dimension $d$, followed by a two-layer MLP with SiLU activation to produce a time conditioning vector. This vector is broadcast-added to all sequence positions:
 \[
-\hat{\boldsymbol{\epsilon}} = \epsilon_{\theta}(\mathbf{h}_t, t).
+\hat{\boldsymbol{\epsilon}} = \epsilon_{\theta}(\mathbf{h}_t + \mathrm{MLP}_{\text{time}}(\mathrm{SinEmb}(t)), t).
 \]
-Architecturally, the denoiser is a stack of Transformer encoder layers operating on sequences of length $L$ with hidden size $d$, followed by a linear projection back to $\mathbb{R}^{d}$. This design matches the long-range dependency structure of kernel traces, where semantically related events may be separated by hundreds to thousands of steps.
+Architecturally, the denoiser consists of 4--8 Transformer encoder layers (depending on configuration) with 4--8 attention heads, operating on sequences of length $L$ with hidden dimension $d=256$. The final layer applies a linear projection to maintain dimensionality. This architecture captures long-range dependencies in kernel traces, where semantically related events may be separated by hundreds to thousands of steps.
 
-\subsubsection{Training Objective}
+\subsubsection{Advanced Training Objectives}
 \label{sec:training-objective}
 
-The primary diffusion objective minimizes mean-squared error between true and predicted noise:
+Beyond the standard diffusion loss, we incorporate three complementary objectives to improve generation quality for kernel traces.
+
+\paragraph{Latent Loss.} The primary diffusion objective minimizes mean-squared error between true and predicted noise:
 \[
-\mathcal{L}_{\text{latent}} = \left\lVert \hat{\boldsymbol{\epsilon}} - \boldsymbol{\epsilon} \right\rVert_2^2.
+\mathcal{L}_{\text{latent}} = \mathbb{E}_{t,\mathbf{h}_0,\boldsymbol{\epsilon}} \left[ \left\lVert \hat{\boldsymbol{\epsilon}} - \boldsymbol{\epsilon} \right\rVert_2^2 \right].
 \]
-In addition, because our traces contain multiple categorical channels that must remain semantically consistent (e.g., event types aligned with CPU/thread context), we use an auxiliary reconstruction loss computed from the model's estimate of the clean latent state:
+
+\paragraph{Reconstruction Loss.} Because kernel traces contain multiple categorical channels that must remain semantically consistent (e.g., event types aligned with CPU/thread context), we compute an auxiliary reconstruction loss from the model's estimate of the clean latent state:
 \[
 \hat{\mathbf{h}}_0 = \frac{\mathbf{h}_t - \sqrt{1-\bar{\alpha}_t}\,\hat{\boldsymbol{\epsilon}}}{\sqrt{\bar{\alpha}_t}}.
 \]
-A feature-specific projection head maps $\hat{\mathbf{h}}_0$ back to per-channel outputs: categorical channels are decoded to logits via linear heads and optimized with cross-entropy, while the continuous \texttt{dt} channel is optimized with MSE. The final objective is:
+A feature-specific projection head (FeatureUnembedder) maps $\hat{\mathbf{h}}_0$ back to per-channel outputs. Categorical channels are decoded to logits via linear heads and optimized with cross-entropy loss, while the continuous \texttt{dt} channel uses MSE loss:
 \[
-\mathcal{L} = \mathcal{L}_{\text{latent}} + \lambda\,\mathcal{L}_{\text{recon}},
+\mathcal{L}_{\text{recon}} = \sum_{c \in \mathcal{C}_{\text{disc}}} \mathcal{L}_{\text{CE}}(\hat{x}_c, x_c) + \mathcal{L}_{\text{MSE}}(\hat{x}_{\text{dt}}, x_{\text{dt}}).
 \]
-where $\lambda$ is a fixed scalar weighting the auxiliary term. This hybrid objective encourages the latent space to retain attribute-specific information throughout diffusion, improving convergence for mixed-modality trace data.
 
-\subsubsection{Sampling and Trace Generation}
+\paragraph{Repetition-Aware Loss.} Real kernel traces exhibit characteristic repetition patterns (e.g., repeated scheduler events). To encourage the model to match these statistics, we introduce a repetition loss that measures immediate event repetitions. Let $\hat{e} = \arg\max(\text{logits}_{\text{event}})$ denote predicted events. We count consecutive repeats in both predictions and targets, then minimize their L1 distance:
+\[
+\mathcal{L}_{\text{rep}} = \left| \sum_{i=1}^{L-1} \mathbb{I}[\hat{e}_i = \hat{e}_{i+1}] - \sum_{i=1}^{L-1} \mathbb{I}[e_i = e_{i+1}] \right|.
+\]
+
+\paragraph{Transition Frequency Loss.} To preserve realistic event transition patterns, we match the empirical distribution of event transitions. We construct histograms of transition pairs $(e_i, e_{i+1})$ for both predictions and targets, normalize to probability distributions, and minimize KL divergence:
+\[
+\mathcal{L}_{\text{trans}} = \text{KL}\left( P_{\text{target}}(e_i, e_{i+1}) \,\|\, P_{\text{pred}}(e_i, e_{i+1}) \right).
+\]
+
+The final training objective combines all components with fixed weights:
+\[
+\mathcal{L} = \mathcal{L}_{\text{latent}} + 0.1 \cdot \mathcal{L}_{\text{recon}} + 0.05 \cdot \mathcal{L}_{\text{rep}} + 0.03 \cdot \mathcal{L}_{\text{trans}}.
+\]
+This multi-objective formulation encourages the latent space to retain attribute-specific information, match statistical properties of real traces, and preserve realistic transition patterns.
+
+\subsubsection{Sampling Strategies}
 \label{sec:sampling}
 
-To generate synthetic traces, we initialize a latent sequence with i.i.d. Gaussian noise and iteratively apply the reverse diffusion update from $t=T-1$ to $0$. After the final step, we decode each channel from the denoised latent sequence. For discrete channels, we take the argmax over the predicted logits to obtain integer IDs; for \texttt{dt}, we output the predicted continuous values. The generated samples are saved in the same windowed \texttt{.npz} format as the training data, enabling direct evaluation under identical preprocessing and metrics.
+We support two sampling strategies for trace generation.
 
-\subsubsection{Implementation Notes}
+\paragraph{Standard DDPM Sampling.} To generate synthetic traces, we initialize a latent sequence $\mathbf{h}_T \sim \mathcal{N}(0, I)$ and iteratively apply the reverse diffusion update for $t = T-1, \ldots, 0$:
+\[
+\mathbf{h}_{t-1} = \frac{1}{\sqrt{\alpha_t}} \left( \mathbf{h}_t - \frac{\beta_t}{\sqrt{1-\bar{\alpha}_t}} \hat{\boldsymbol{\epsilon}} \right) + \sqrt{\beta_t} \boldsymbol{z}, \quad \boldsymbol{z} \sim \mathcal{N}(0, I),
+\]
+where the noise term is omitted for $t=0$. This requires 1000 denoising steps.
+
+\paragraph{DDIM Fast Sampling.} For efficient generation, we implement DDIM~\cite{song2020denoising}, a deterministic sampling procedure that reduces the number of steps from 1000 to 50 with minimal quality degradation. DDIM uses a non-Markovian reverse process. Given a subsequence of timesteps $\{\tau_1, \ldots, \tau_S\}$ where $S \ll T$, the update rule is:
+\[
+\mathbf{h}_{\tau_{i-1}} = \sqrt{\bar{\alpha}_{\tau_{i-1}}} \hat{\mathbf{h}}_0 + \sqrt{1 - \bar{\alpha}_{\tau_{i-1}} - \sigma_i^2} \hat{\boldsymbol{\epsilon}} + \sigma_i \boldsymbol{z},
+\]
+where $\hat{\mathbf{h}}_0 = (\mathbf{h}_{\tau_i} - \sqrt{1-\bar{\alpha}_{\tau_i}} \hat{\boldsymbol{\epsilon}}) / \sqrt{\bar{\alpha}_{\tau_i}}$ and \newline $\sigma_i = \eta \sqrt{(1-\bar{\alpha}_{\tau_{i-1}})/(1-\bar{\alpha}_{\tau_i})} \sqrt{1 - \bar{\alpha}_{\tau_i}/\bar{\alpha}_{\tau_{i-1}}}$. Setting $\eta=0$ yields fully deterministic sampling. This achieves a 20$\times$ speedup over standard DDPM sampling.
+
+After the final denoising step, we decode each channel from the denoised latent sequence $\mathbf{h}_0$. For discrete channels, we apply argmax over predicted logits to obtain integer IDs; for \texttt{dt}, we directly output the predicted continuous values. Generated samples are saved in the same windowed \texttt{.npz} format as training data, enabling direct evaluation under identical preprocessing pipelines.
+
+\subsubsection{Implementation Details}
 \label{sec:implementation-notes}
 
-Our implementation is organized into a dataset loader for streaming windowed \texttt{.npz} shards and a modular model consisting of: (i) a multi-channel feature embedder, (ii) a time-conditioned Transformer denoiser, and (iii) per-channel decoding heads. The loader supports configurable channel subsets and sequence lengths, which we use to conduct feature-ablation and context-length studies under a unified training pipeline.
+Our implementation consists of three modular components: (i) \texttt{FeatureEmbedder}---a multi-channel embedding layer that maps discrete and continuous inputs to a unified latent space, (ii) \texttt{TransformerDenoiser}---a time-conditioned Transformer encoder that predicts noise, and (iii) \texttt{FeatureUnembedder}---per-channel linear heads that decode latent states to channel-specific outputs. The data loader streams windowed \texttt{.npz} shards and supports configurable channel subsets and sequence lengths, enabling feature ablation and context-length studies within a unified training pipeline. All models are trained using AdamW optimization with a cosine learning rate schedule.
 
 
 

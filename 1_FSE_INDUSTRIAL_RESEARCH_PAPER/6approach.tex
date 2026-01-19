@@ -16,17 +16,12 @@ We organize our evaluation around four research questions:
 
 \textbf{RQ4: Can simpler diffusion models (fewer channels) achieve comparable synthetic data quality with lower computational cost?} Through ablation studies, we determine whether modeling all six trace channels (event, dt, cpu, tid, comm, ret) is necessary or if simpler 2-channel (event + dt) or 4-channel models suffice.
 
-\subsection{Data Representation and Preprocessing}
-\label{sec:data-preprocessing}
+\subsection{Dataset}
+\label{sec:dataset}
 
-Our study builds on an existing corpus of real-world kernel execution traces collected using the Linux Tracing Toolkit Next Generation (LTTng). Specifically, we use the dataset introduced by Martin et al.~\cite{martin2017lttng}, which contains execution traces for nine widely used Phoronix benchmarks: \emph{compress-gzip}, \emph{ffmpeg}, \emph{iozone}, \emph{phpbench}, \emph{pybench}, \emph{ramspeed}, \emph{scimark2}, \emph{stream}, and \emph{unpack-linux}. These benchmarks exercise diverse system behaviors, including CPU-intensive, memory-intensive, and I/O-heavy workloads, making them suitable for studying realistic kernel-level activity.
+We use kernel execution traces from the LTTng dataset introduced by Martin et al.~\cite{martin2017lttng}, which contains traces for nine Phoronix benchmarks: \emph{compress-gzip}, \emph{ffmpeg}, \emph{iozone}, \emph{phpbench}, \emph{pybench}, \emph{ramspeed}, \emph{scimark2}, \emph{stream}, and \emph{unpack-linux}. These benchmarks exercise diverse system behaviors (CPU-intensive, memory-intensive, I/O-heavy workloads), making them suitable for studying realistic kernel-level activity. Traces were collected on a desktop machine (Xeon E3-1225 @ 3.20GHz, 32GB RAM) using LTTng's \emph{all-events} configuration, which captures kernel-level events across the entire operating system. Each benchmark provides 32 independent runs.
 
-The traces were collected on a desktop-class machine equipped with an x86-64 Xeon E3-1225 processor running at 3.20\,GHz, 32\,GB of memory, SSD storage, and a Gigabit Ethernet connection. For each benchmark, the dataset provides execution traces across three tracing configurations, with 32 independent runs per configuration. In this work, we focus exclusively on the \emph{all-events} configuration, which captures kernel-level events across the entire operating system. We exclude the \emph{libc} configuration, which traces user-space memory-related function calls, as our objective is to model kernel behavior rather than application-level APIs.
-
-\paragraph{Trace Extraction.}
-The original traces are stored in the native LTTng kernel trace format, which is not directly suitable for machine learning workflows. To convert these traces into a more accessible representation, we use the \texttt{babeltrace2} toolchain to decode and dump the binary LTTng traces into human-readable text logs. This step preserves the full event stream while making the data amenable to systematic parsing and transformation.
-
-Each decoded trace consists of a temporally ordered sequence of kernel events. For every event, the log records a high-resolution timestamp, the elapsed time since the previous event, the CPU core on which the event occurred, and event-specific metadata. An excerpt from a decoded trace is shown below for illustration:
+Raw LTTng traces are decoded into temporally ordered sequences of kernel events, where each event records a timestamp, inter-event time delta, CPU core, and event-specific metadata. An example excerpt:
 
 \begin{verbatim}
 [08:46:31.491346508] (+?.?????????) flutin kmem_kmalloc:
@@ -43,69 +38,13 @@ Each decoded trace consists of a temporally ordered sequence of kernel events. F
   tid = 2208, prio = 20, target_cpu = 2 }
 \end{verbatim}
 
-\paragraph{Multi-Channel Event Representation.}
-Rather than modeling only event types, we extract a comprehensive multi-channel representation that captures both temporal and system-level context. Each kernel event is represented by six channels: (i) \texttt{event}---the event type identifier, (ii) \texttt{dt}---the inter-event time delta in seconds, (iii) \texttt{cpu}---the CPU core identifier, (iv) \texttt{tid}---the thread identifier, (v) \texttt{comm}---the process command name, and (vi) \texttt{ret}---the return value for system calls. This multi-modal representation enables the model to learn correlations between event semantics, timing patterns, and system resource allocation, which are critical for generating realistic synthetic traces.
+From these raw traces, we extract a structured multi-channel representation for modeling.
 
-At this stage, the output of preprocessing is a cleaned, time-ordered textual representation of kernel events with extracted multi-channel attributes, serving as an intermediate format between raw LTTng traces and the machine-learning-ready data structures described next.
+\paragraph{Multi-Channel Representation.} Each kernel event is represented by six channels capturing both temporal and system-level context: (i) \texttt{event}---event type identifier (384 unique types across all benchmarks), (ii) \texttt{dt}---inter-event time delta in seconds, (iii) \texttt{cpu}---CPU core identifier, (iv) \texttt{tid}---thread identifier, (v) \texttt{comm}---process command name (123 unique values), and (vi) \texttt{ret}---return value for system calls (1026 unique values). This multi-modal representation enables the model to learn correlations between event semantics, timing patterns, and system resource allocation.
 
+\paragraph{Vocabulary and Preprocessing.} We construct global vocabularies for categorical channels (\texttt{event}, \texttt{comm}, \texttt{ret}) by scanning all traces and assigning deterministic integer identifiers ordered by frequency. Event identifiers range from 0--383, with more common events receiving smaller indices. Vocabularies include special tokens for padding (\texttt{\textlangle PAD\textrangle}, ID 0) and unknown values (\texttt{\textlangle UNK\textrangle}, ID 1), and are frozen across all experiments to ensure consistency. Continuous channels (\texttt{dt}) are log-normalized using $\log(1 + \Delta t)$ to reduce scale variance. Thread identifiers are hashed into 256 buckets to control cardinality.
 
-
-
-
-\subsection{Vocabulary Construction and Structured Storage}
-\label{sec:parquet}
-
-\paragraph{Global Vocabulary Construction.}
-Machine learning models operating on symbolic system traces require a stable and consistent mapping from categorical values to numeric identifiers. To ensure determinism and comparability across benchmarks, runs, and experimental conditions, we construct a \emph{global vocabulary} prior to any downstream modeling.
-
-We scan all decoded text traces from the \emph{all-events} configuration across all benchmarks and runs to extract kernel event names. Event names are parsed directly from each trace line using a fixed regular expression that identifies the kernel event token preceding the payload delimiter (``\texttt{:}''). The first event line of each trace is excluded from vocabulary construction and downstream processing, as its inter-event delta is undefined (denoted by ``\texttt{?}'' in the original traces) and cannot be reliably converted into a numerical time representation.
-
-Each unique event name is assigned a deterministic integer identifier ordered by decreasing frequency, such that more common events receive smaller identifiers. This frequency-based ordering follows standard practice in natural language processing and ensures that the most frequent system behaviors are represented with compact indices. The resulting vocabulary contains 384 unique kernel event types observed across all nine benchmarks. In addition to the forward mapping (\texttt{event\_name} $\rightarrow$ \texttt{event\_id}), we retain the inverse mapping for interpretability and post-hoc analysis.
-
-Beyond event names, we construct auxiliary vocabularies for selected high-frequency payload attributes that exhibit categorical structure. In particular, we build vocabularies for process command names (\texttt{comm}) and return values (\texttt{ret}). The \texttt{comm} vocabulary contains 123 unique process names and is kept in full due to its limited cardinality. The \texttt{ret} vocabulary is constructed from the most frequent return values and contains 1026 entries, with rare values mapped to a dedicated unknown token. All vocabularies reserve special tokens for padding (\texttt{\textlangle PAD\textrangle}, ID 0) and unknown values (\texttt{\textlangle UNK\textrangle}, ID 1), and are frozen once constructed to prevent drift across experiments.
-
-\paragraph{Enriched Parquet Representation.}
-To support scalable analysis and efficient training, we convert the decoded text traces into a columnar, structured representation using Apache Parquet. Each trace run is processed independently, resulting in one Parquet file per benchmark run. This design enables embarrassingly parallel preprocessing and avoids cross-run coupling during storage.
-
-We adopt a hybrid schema that balances structural regularity with full trace fidelity. Each event is represented as a single row with three categories of attributes:
-(i) \emph{core fields} that are present for every event,
-(ii) \emph{first-class payload fields} that occur frequently but sparsely, and
-(iii) a catch-all field for all remaining event-specific parameters.
-
-Core fields include the original line index, raw timestamp string, inter-event time delta in seconds, cumulative relative time in nanoseconds, event name, event identifier, and CPU identifier. First-class payload fields capture commonly used parameters such as thread and process identifiers (\texttt{tid}, \texttt{pid}), process command name (\texttt{comm}), return value (\texttt{ret}), file descriptors (\texttt{fd}), filenames, and scheduler state when available. All remaining parameters are serialized into a JSON-encoded dictionary and stored in a dedicated \texttt{extra\_params} column to preserve information completeness without inflating the schema.
-
-During conversion, timestamps are transformed into a strictly monotonic relative time representation by cumulatively summing inter-event deltas. Parsing and serialization are performed in streaming batches to bound memory usage, enabling processing of large traces on commodity hardware. Parquet files are written using dictionary encoding and Zstandard compression to reduce storage footprint and improve I/O performance.
-
-The resulting Parquet dataset provides a uniform, schema-stable, and scalable foundation for subsequent windowing, modeling, and evaluation stages, while preserving a direct correspondence to the original kernel trace semantics.
-
-
-
-
-
-
-
-
-
-
-\subsection{Windowed Sequence Construction}
-\label{sec:windowing}
-
-The final stage of preprocessing converts the enriched Parquet traces into fixed-length, windowed sequences suitable for deep generative models. Kernel traces are inherently long, variable-length streams, whereas modern sequence models require bounded context lengths and dense tensor representations. To bridge this gap, we segment each trace into overlapping windows and store them in a compressed NumPy-based format.
-
-For each Parquet trace, we extract ordered sequences of event-level attributes and apply feature-specific transformations to normalize value ranges and reduce dimensionality. Event identifiers (\texttt{event}) and CPU identifiers (\texttt{cpu}) are preserved as discrete categorical values with data types \texttt{int32} and \texttt{int8}, respectively. Inter-event time deltas (\texttt{dt}) are log-normalized using $\log(1 + \Delta t)$ to reduce scale variance while preserving temporal ordering, and stored as \texttt{float32}. Thread identifiers (\texttt{tid}) are hashed into a fixed number of buckets via modulo operation (\texttt{tid} $\bmod$ 256) to retain local thread identity without introducing unbounded cardinality, stored as \texttt{int16}. File descriptors (\texttt{fd}) are clamped to a maximum value of 1024 to control sparsity, with out-of-range values mapped to the cap, stored as \texttt{int16}. Categorical fields such as process command names (\texttt{comm}) and return values (\texttt{ret}) are mapped using the frozen vocabularies described earlier and stored as \texttt{int16}.
-
-We generate fixed-length windows of length $L$ using a sliding window with configurable stride $S$, producing multiple overlapping sequences from a single execution trace. Each window is stored as a set of aligned tensors, including event identifiers, time deltas, CPU identifiers, thread identifiers, file descriptors, command identifiers, and return-value identifiers. All tensors share the same shape $(N, L)$, where $N$ denotes the number of windows extracted from a trace and $L$ is the sequence length.
-
-To support experimentation with varying temporal contexts, we materialize multiple windowed datasets with different sequence lengths ($L \in \{256, 1024, 4096\}$). This design enables systematic evaluation of short-, medium-, and long-context models without modifying upstream preprocessing logic. The resulting datasets are stored as compressed NumPy archives (\texttt{.npz}), which provide fast loading, low storage overhead, and seamless integration with common machine learning frameworks.
-
-This windowed representation serves as the final machine-learning-ready input for all models evaluated in this work.
-
-
-
-
-
-
-
+\paragraph{Windowed Sequences.} Kernel traces are inherently long, variable-length streams. To make them suitable for deep generative models, we segment each trace into fixed-length overlapping windows using a sliding window approach. We generate datasets with three context lengths: $L \in \{256, 1024, 4096\}$, enabling systematic evaluation of short-, medium-, and long-context models. Each window contains aligned tensors for all six channels, with shape $(N, L)$ where $N$ is the number of windows per trace and $L$ is the sequence length. This windowed representation serves as the machine-learning-ready input for all models evaluated in this work.
 
 \subsection{Diffusion Model for Multi-Attribute Kernel Traces}
 \label{sec:diffusion-model}
@@ -319,5 +258,3 @@ where $\text{TopK}(\mathbf{p}_i)$ denotes the set of $K$ event classes with high
 where $p(y_i \mid \mathbf{x}_i)$ is the predicted probability of the true class. Lower loss indicates higher confidence in correct predictions, complementing discrete accuracy metrics with a continuous measure of prediction quality.
 
 \paragraph{Experimental Configurations.} For each diffusion model configuration, we train downstream predictors on four datasets: (i) \textbf{Real only}---baseline using only real training data, (ii) \textbf{Synthetic only}---trained entirely on synthetic data, (iii) \textbf{Combined (repaired)}---50/50 mix of real and constraint-repaired synthetic data, and (iv) \textbf{Combined (no repair)}---50/50 mix of real and raw synthetic data. All predictors are evaluated on the same held-out real test set to measure synthetic data utility.
-
-\subsection{Training Dynamics}

@@ -1,13 +1,20 @@
 \section{Experimental Setup}
 \label{sec:experiments}
 
-This section describes the compute environment, datasets, experimental design, and sampling procedure used to evaluate the proposed diffusion-based kernel trace generator. All experiments use a unified training and generation pipeline and differ only in controlled variables such as temporal context length and feature availability.
+This section describes the compute environment, datasets, experimental design, and sampling procedure used to evaluate the proposed diffusion-based kernel trace generator. All experiments use a unified training and generation pipeline and differ only in controlled variables such as temporal context length and feature availability. Figure~\ref{fig:downstream-training} illustrates our evaluation methodology.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\columnwidth]{figures/2bg.png}
+\caption{Downstream training evaluation methodology. We conduct independent training runs using: (1) Real-Only: baseline trained on 50\% real data, (2) Synthetic-Only: trained on synthetic data (raw or repaired), and (3) Combined: trained on 50\% real + 50\% synthetic data. All configurations are evaluated on the same held-out real test set using a Transformer-based next-event predictor. This setup measures how well synthetic data captures real system behavior and whether it can effectively augment limited real data.}
+\label{fig:downstream-training}
+\end{figure}
 
 \subsection{Compute Environment and Datasets}
 
 All experiments were executed on the Nibi high-performance computing cluster. Each training and sampling job was allocated a single NVIDIA H100 GPU with 80\,GB of device memory, along with 8 CPU cores and 32\,GB of host memory. Mixed-precision training with \texttt{bf16} and TF32 acceleration was enabled to maximize throughput and maintain numerical stability on H100-class hardware.
 
-We use windowed NPZ datasets derived from real LTTng kernel traces, as described in Section~\ref{sec:windowing}. Each dataset consists of fixed-length sequences extracted from the \texttt{all-events} tracing configuration and split into training, validation, and test partitions. Unless otherwise stated, experiments are conducted on the \texttt{scimark2} benchmark, which exhibits a diverse mix of compute, scheduling, and memory behavior and is commonly used in systems performance analysis.
+We use windowed NPZ datasets derived from real LTTng kernel traces, as described in Section~\ref{sec:dataset}. Each dataset consists of fixed-length sequences extracted from the \texttt{all-events} tracing configuration and split into training, validation, and test partitions. Unless otherwise stated, experiments are conducted on the \texttt{scimark2} benchmark, which exhibits a diverse mix of compute, scheduling, and memory behavior and is commonly used in systems performance analysis.
 
 \subsection{Model and Training Configuration}
 \label{sec:model-config}

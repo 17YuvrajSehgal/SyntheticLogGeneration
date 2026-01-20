@@ -16,6 +16,13 @@ We organize our evaluation around four research questions:
 
 \textbf{RQ4: Can simpler diffusion models (fewer channels) achieve comparable synthetic data quality with lower computational cost?} Through ablation studies, we determine whether modeling all six trace channels (event, dt, cpu, tid, comm, ret) is necessary or if simpler 2-channel (event + dt) or 4-channel models suffice.
 
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.95\textwidth]{figures/1bg.png}
+\caption{Complete pipeline for synthetic kernel trace generation. The pipeline consists of three main stages: (1) Data Preparation: raw kernel traces are enriched with Parquet metadata, tokenized, and windowed into sequences of varying lengths (L=256, 1024, 4096); (2) Generator: a multi-channel diffusion model with Transformer denoiser learns to generate synthetic traces through forward diffusion and noise injection; (3) Repair \& Constraints: learned constraints are used to validate generated traces and apply post-hoc repair to ensure structural validity.}
+\label{fig:pipeline-overview}
+\end{figure*}
+
 \subsection{Dataset}
 \label{sec:dataset}
 

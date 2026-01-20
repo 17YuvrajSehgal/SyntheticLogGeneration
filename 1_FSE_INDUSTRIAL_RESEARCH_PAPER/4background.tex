@@ -1,3 +1,54 @@
- \section{Background and Motivation}
- \label{sec:background}
-Working on it.....
+\section{Background and Motivation}
+\label{sec:background}
+
+This section provides background on kernel execution traces and diffusion models, then motivates the design choices underlying \textsc{SynthTrace}.
+
+\subsection{Kernel Execution Traces}
+\label{sec:bg-traces}
+
+Kernel execution traces capture low-level system events as they occur during program execution.\cite{Noferesti2024Enhancing, Njoku2025Kernel-Level, Giraldeau2016Wait, Gebai2018Survey}
+
+Unlike application logs, which record high-level operations at developer-specified points, kernel traces provide a comprehensive view of system behavior: process scheduling, memory allocation, file system operations\cite{Naas2021EZIOTracer}, network I/O\cite{Gellé2021Combining}, and inter-process communication\cite{Giraldeau2016Wait, Gellé2021Combining}.
+
+Modern Linux systems support kernel tracing through frameworks such as LTTng (Linux Trace Toolkit Next Generation)\cite{Desnoyers2006The, Beamonte2015Linux}, eBPF\cite{eBPF}, and ftrace.
+LTTng, which we use in this work, provides high-performance tracing with configurable event selection and minimal runtime overhead\cite{Desnoyers2006The}.
+A typical LTTng trace contains millions of events per minute of execution, with each event recording:
+
+\begin{itemize}[leftmargin=*,nosep]
+  \item \textbf{Timestamp}: High-resolution (nanosecond) wall-clock time
+  \item \textbf{Event type}: One of hundreds of kernel event categories (e.g., \texttt{sched\_switch}, \texttt{kmem\_alloc}, \texttt{syscall\_entry})
+  \item \textbf{CPU}: The processor core on which the event occurred
+  \item \textbf{Process metadata}: Thread ID, process ID, and command name
+  \item \textbf{Event-specific payload}: Parameters such as memory addresses, file descriptors, return values, and scheduling priorities
+\end{itemize}
+
+These attributes are not independent: event types constrain which payload fields are present, CPU affinity reflects scheduler decisions, and timing patterns vary by workload phase.
+Generating realistic synthetic traces requires modeling these multi-dimensional dependencies.
+
+\subsection{Diffusion Models for Sequence Generation}
+\label{sec:bg-diffusion}
+
+Denoising diffusion probabilistic models (DDPMs)~\cite{ho2020denoising} have emerged as a powerful approach for generative modeling.
+Unlike autoregressive models that generate sequences token-by-token, diffusion models learn to iteratively denoise a corrupted signal, enabling parallel generation and better capture of global structure.
+
+The diffusion process consists of two phases.
+In the \emph{forward process}, Gaussian noise is progressively added to data samples over $T$ timesteps until the signal is completely obscured.
+In the \emph{reverse process}, a neural network learns to predict and remove the noise at each step, gradually recovering the original data distribution from pure noise.
+
+For sequence data, Transformer-based architectures~\cite{vaswani2017attention} serve as effective denoisers, as self-attention can model long-range dependencies between sequence positions.
+This property is particularly relevant for kernel traces, where causally related events (e.g., a system call entry and its corresponding exit) may be separated by hundreds or thousands of intervening events.
+
+\subsection{Motivation for Constraint-Guided Generation}
+\label{sec:bg-motivation}
+
+Neural generative models excel at capturing statistical patterns but may produce outputs that violate domain-specific invariants.
+For kernel traces, such violations undermine utility for downstream ML tasks:
+
+\begin{itemize}[leftmargin=*,nosep]
+  \item \textbf{Invalid transitions}: Certain event sequences are impossible (e.g., \texttt{syscall\_exit} without a preceding \texttt{syscall\_entry}).
+  \item \textbf{Temporal violations}: Inter-event delays outside observed ranges indicate unrealistic execution speeds.
+  \item \textbf{Attribute inconsistency}: Events occurring on CPUs that never appear in real traces, or process names that don't match observed patterns.
+\end{itemize}
+
+Rather than relying solely on the model to learn these constraints implicitly, \textsc{SynthTrace} explicitly mines invariants from real traces and applies post-hoc repair to correct violations.
+This hybrid approach combines the statistical modeling power of diffusion models with the precision of constraint-based validation.

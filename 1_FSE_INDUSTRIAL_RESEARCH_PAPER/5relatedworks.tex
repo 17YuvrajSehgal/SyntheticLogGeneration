@@ -1,67 +1,26 @@
-\section{Related Works}
+\section{Related Work}
 \label{sec:related-works}
 
+Our work builds on three research areas: synthetic trace generation, constraint-guided generation, and diffusion models for structured sequences.
 
-Synthetic trace generation has emerged as a critical research area to address the scarcity of real-world system traces due to privacy concerns, collection costs, and data availability limitations.
-This subsubsection surveys prior work across three complementary dimensions: trace generation methodologies, constraint-based generation approaches, and evaluation frameworks for synthetic traces.
+\subsection{Synthetic Trace Generation}
 
-\subsubsection*{Trace Synthesis and Abstraction}
-Early work on trace synthesis focused on pattern-matching and state-based abstraction techniques.
-\cite{Ecole4861} proposed a stateful approach to generate synthetic events from kernel traces, converting raw platform-specific events into semantically meaningful synthetic events through pattern matching and system state modeling.
-Their method uses a modeled state database to store system metrics and resources, enabling generation of complex synthetic events by combining semantic events with state values.
-This foundational work demonstrated that state information is essential for generating high-level abstractions from low-level trace events.
+Early trace synthesis approaches relied on pattern-matching and state-based abstraction. Ecole et al.~\cite{Ecole4861} proposed stateful event generation from kernel traces, converting platform-specific events into semantic abstractions through pattern matching and system state modeling. More recently, domain-specific methods have emerged: SAGA~\cite{Huang2024SAGASA} generates labeled audit logs for cybersecurity using attack pattern templates from the MITRE ATT\&CK framework, demonstrating effectiveness on intrusion detection and campaign attribution tasks. TraceLLM~\cite{kim2025largelanguagemodelsrealistic} applies large language models to microservice call graph generation through recursive layer-by-layer generation with instruction tuning, achieving performance within 1.5\% of real-data baselines when trained on synthetic data alone.
 
-More recently, domain-specific trace generation has gained prominence.
-SAGA (Synthetic Audit Log Generation for APT Campaigns\cite{Huang2024SAGASA} generates labeled audit logs for cybersecurity applications by combining red team emulation with template-based generation.
-SAGA uses attack pattern templates derived from MITRE ATTCK framework definitions, abstracting system entities through category-descriptor hypernym relationships and generating synthetic logs through lifecycle-aware composition.
-This approach validates downstream utility on intrusion detection, technique hunting, and campaign detection tasks, demonstrating that synthetic traces can effectively support security analysis workflows.
+\subsection{Constraint-Guided Generation}
 
-\subsubsection*{Constraint-Guided Generation Methods}
-Enforcing structural and semantic constraints during generation remains a significant challenge.
-Tracyn \cite{huang2025projecttracyngenerativeartificial} reformulates PCIe TLP (Transaction Layer Packet) trace generation as an image generation problem and applies post-hoc constraint repair through dispersion-based calibration.
-Rather than enforcing constraints during generation, Tracyn uses a two-stage pipeline: (1) image-based content generation from various backbone generative models, and (2) calibration that identifies and corrects violations of PCIe-specific ordering and causality constraints.
-This post-hoc repair strategy is flexible and works with any backbone generator, achieving up to 1000× improvement in task-specific metrics and 2.19× improvement in Fréchet Inception Distance compared to backbone-only methods.
+Enforcing structural and semantic constraints remains a key challenge. Tracyn~\cite{huang2025projecttracyngenerativeartificial} reformulates PCIe trace generation as image generation and applies post-hoc constraint repair through dispersion-based calibration, achieving 1000× improvement in task-specific metrics. This two-stage approach—unconstrained generation followed by targeted repair—demonstrates that post-hoc correction can be more effective than constrained generation. Our constraint-guided repair mechanism follows this paradigm but learns constraints directly from real traces rather than relying on domain-specific rules.
 
+\subsection{Diffusion Models for Structured Sequences}
 
-\cite{11029922} introduce diffusion-based generative models for reconstructing missing events in kernel execution traces caused by buffer overflow in tracing systems.
-Treating trace reconstruction as a data imputation task, they evaluate four diffusion models (DiffWave, SSSDS4, SSSDSA, CSDIS4) on diverse system call sequences from the Phoronix Test Suite.
-The SSSDS4 model, which incorporates Structured State Space Models, achieves superior performance with 81.62\% accuracy and 90.84 ROUGE-L score when reconstructing missing event segments.
-A key innovation is leveraging both preceding and following intact trace data as context, enabling the model to significantly outperform traditional prediction-based approaches (LSTM achieves only 29.61\% accuracy on comparable reconstruction tasks).
-This work establishes diffusion models as a promising alternative to conventional trace abstraction and reconstruction techniques, demonstrating their effectiveness across varying sequence lengths, missing data ratios, and event categories.
+Recent work has explored diffusion models for trace reconstruction and generation. Li et al.~\cite{11029922} apply diffusion models (DiffWave, SSSDS4, SSSDSA, CSDIS4) to reconstruct missing events in kernel traces caused by buffer overflow, treating reconstruction as data imputation. Their SSSDS4 model achieves 81.62\% accuracy by leveraging both preceding and following context, significantly outperforming LSTM baselines (29.61\% accuracy). This work establishes diffusion models as viable alternatives to traditional trace abstraction techniques.
 
+Our work extends these foundations in three ways: (1) we generate complete multi-attribute traces rather than reconstructing missing segments, (2) we jointly model six correlated trace attributes in a unified latent space, and (3) we evaluate synthetic data quality through downstream task performance rather than reconstruction accuracy.
 
+\subsection{Limitations of Prior Approaches}
 
+Toemmel et al.~\cite{toemmel2021catchganusingartificial} demonstrate that GANs (SeqGAN, MaliGAN, CoT) fail for log generation due to inability to maintain semantic properties. Despite achieving syntactic correctness, evaluated GANs violated chronology (non-monotonic timestamps) and event coherence (invalid state transitions). This negative result motivated exploration of alternative generative paradigms—including diffusion models—better suited to structured sequence modeling with hard constraints.
 
-\subsubsection*{LLM-Based Synthetic Generation}
-Large language models have been adapted for structured trace generation.
-TraceLLM \cite{kim2025largelanguagemodelsrealistic}generates microservice call graphs using recursive generation and instruction tuning.
-The method decomposes the generation task into layer-by-layer recursive subgraph generation, where each layer generates edges originating from a source node and produces conditioning information for the next layer.
-This hierarchical decomposition breaks complex generation tasks into more manageable subtasks.
-TraceLLM further uses intermediate reasoning steps—natural language instructions that enforce arithmetic and logical checks—to ensure constraint adherence.
-When trained on synthetic data alone, TraceLLM-trained models achieve critical component extraction accuracy within 1.5 percentage points of models trained on real data.
+\subsection{Positioning of Our Work}
 
-For modeling domain traces, recent work evaluates multiple LLMs (GPT-4, GPT-3.5, Llama3, Gemini) for synthetic trace generation using few-shot in-context learning.
-This work introduces domain-specific hallucination metrics tailored to model-driven engineering contexts and demonstrates that GPT-4 produces the best results with minimal hallucination.
-Mixing real and synthetic traces (50:50 ratio) provides an effective compromise when real traces are unavailable due to privacy or intellectual property constraints.
-
-\subsubsection*{Limitations of Existing Approaches}
-A critical negative result from \cite{toemmel2021catchganusingartificial}
-demonstrates that GANs (SeqGAN, MaliGAN, CoT) fail for log generation due to their inability to maintain semantic properties required by traces.
-Despite achieving reasonable syntactic properties, the evaluated GANs violated chronology (timestamps not monotonic) and event coherence (invalid state transitions).
-This work established that semantic constraint adherence—beyond syntactic correctness—is essential for trace generation and motivated exploration of alternative generative paradigms better suited to structured sequence modeling.
-
-\subsubsection*{Evaluation Frameworks for Synthetic Traces}
-Evaluating synthetic trace quality requires both distributional metrics and downstream task validation.
-SAGA validates synthetic logs on three downstream security tasks—intrusion detection, technique hunting, and APT campaign attribution—showing that methods trained on synthetic logs can generalize to unseen real-world datasets.
-TraceLLM demonstrates downstream utility through critical component extraction and anomaly detection tasks, where models trained on synthetic data achieve comparable performance to real-data trained models (within 1.5 percentage points).
-
-\subsubsection*{Data Augmentation with Synthetic Traces}
-Beyond generation quality, research has examined using synthetic traces to augment real training data.
-TraceLLM shows that synthetic traces can effectively replace real data for training ML-driven microservice management tasks.
-Similarly, LLM-based modeling trace generation demonstrates that 50:50 mixing of real and synthetic traces can improve downstream task performance when real traces are limited, suggesting synthetic traces can act as effective regularizers for trace-based machine learning systems.
-
-
-
-
-
-
+Unlike prior work focusing on specific domains (cybersecurity logs, microservice traces, PCIe packets), we target general-purpose kernel execution traces with diverse workload characteristics. Our multi-channel diffusion model jointly generates correlated attributes while our constraint-guided repair ensures 100\% structural validity. We provide the first comprehensive evaluation of synthetic kernel trace quality across workload types, context lengths, and model configurations, with actionable guidance for practitioners on when synthetic augmentation is viable.

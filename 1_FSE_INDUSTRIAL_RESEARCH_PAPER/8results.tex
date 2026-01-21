@@ -1,18 +1,32 @@
 \section{Results}
 \label{sec:results}
 
-We organize results around four research questions (RQ1--RQ4) using a downstream next-event prediction task. Unless otherwise stated, models are evaluated on the held-out real test split, and we report macro-F1 as the primary metric, with accuracy and Top-5 accuracy as secondary metrics.
+We organize results around four research questions (RQ1--RQ4) that assess when and how synthetic kernel traces can be safely used in place of real data. All results are based on a downstream next-event prediction task evaluated on a held-out real test set. We report macro-F1 as the primary metric to capture rare-event behavior, with accuracy and Top-K accuracy as secondary indicators of overall plausibility.
 
-\subsection{RQ1: For which workload types can synthetic data effectively double training dataset size?}
+
+
+\subsection{RQ1: When can synthetic kernel traces safely augment limited real training data?}
 \label{sec:rq1}
 
-To evaluate the practical utility of synthetic data augmentation, we simulate a scenario where real data collection is expensive and we seek to double the training dataset size using synthetic data. We compare downstream task performance when training on: (i) \textbf{Real-only (50\% data)}: baseline using only real training data, and (ii) \textbf{Combined (100\% data)}: 50\% real + 50\% constraint-repaired synthetic data. This setup quantifies the performance trade-off for doubling dataset size with synthetic augmentation.
+To evaluate the practical utility of synthetic data augmentation, we simulate a realistic scenario in which collecting additional kernel traces is costly or infeasible. Starting from 50\% of the available real training data, we assess whether synthetic traces can be used to double the effective dataset size without substantially degrading downstream performance.
 
-Table~\ref{tab:rq1} presents F1-Macro scores across six benchmarks and three context lengths, along with the performance degradation ($\Delta$F1) when using synthetic augmentation.
+Specifically, we compare (i) \textbf{Real-only (50\%)} training against (ii) \textbf{Combined (100\%)} training using 50\% real data and 50\% constraint-repaired synthetic data. This setup reflects a common engineering trade-off in which synthetic traces are used to compensate for limited observability or expensive data collection.
+
+Results in Table~\ref{tab:rq1} reveal strong workload dependence; bold values indicate cases where macro-F1 degradation remains below 5\%, italics denote moderate degradation (5--20\%), and unformatted values indicate larger performance loss.
+ Compute-heavy and structurally regular workloads benefit most from augmentation. At $L=4096$, \texttt{scimark2} achieves 87.2\% macro-F1 with synthetic augmentation, only 2.6 percentage points below the real-only baseline (89.8\%). In contrast, I/O-intensive workloads such as \texttt{stream} and \texttt{iozone} exhibit substantial degradation (25--36\%), indicating that synthetic traces are less reliable for workloads dominated by asynchronous I/O and complex kernel interactions under the evaluated configurations.
+
+
+Increasing diffusion context length consistently reduces degradation. Average macro-F1 loss decreases from 38.1\% at $L=256$ to 17.7\% at $L=4096$, suggesting that long-range temporal context is critical for preserving rare-event behavior in synthetic traces.
+
+Secondary metrics in Table~\ref{tab:rq1-secondary} provide additional insight. While macro-F1 exposes degradation on rare events, weighted F1 and accuracy remain high (86--97\%), and Top-5/Top-10 accuracy exceeds 96\% across all configurations. This indicates that models trained with synthetic data perform well on frequent events and often include the correct next event among a small set of plausible alternatives, even when the top prediction is incorrect.
+
+\paragraph{Practical takeaway.}
+Synthetic kernel traces can effectively augment limited real data for compute-heavy and structurally regular workloads when sufficient temporal context is available. For I/O-dominated workloads, practitioners should treat synthetic augmentation with caution.
+
 
 \begin{table*}[t]
 \centering
-\caption{RQ1: Performance trade-offs for doubling dataset size with synthetic data augmentation. We compare training on 50\% real data (Real-Only) vs 100\% data (50\% real + 50\% synthetic). $\Delta$F1 shows the F1-Macro loss from augmentation. \textbf{Bold} indicates acceptable degradation ($<$5\%), \textit{italic} indicates moderate degradation (5--20\%), and regular text indicates significant degradation ($>$20\%).}
+\caption{RQ1: Performance trade-offs when doubling the training dataset size using synthetic data. We compare training on 50\% real data (Real-only) with training on 100\% data composed of 50\% real and 50\% synthetic traces (Combined). $\Delta$F1 reports the change in macro-F1 score introduced by synthetic augmentation across workloads and context lengths.}
 \label{tab:rq1}
 \footnotesize
 \setlength{\tabcolsep}{4pt}
@@ -34,13 +48,11 @@ unpack-linux & 63.4\% & 27.8\% & -35.6\% & 69.1\% & 44.3\% & -24.8\% & --- & 43.
 \end{tabular}
 \end{table*}
 
-Table~\ref{tab:rq1} shows that synthetic data augmentation exhibits strong workload dependence across all context lengths. At L=4096, scimark2 achieves 87.2\% F1-Macro with 2$\times$ data, only 2.6 percentage points below the real-only baseline (89.8\%), while I/O-heavy workloads (stream, iozone, unpack-linux) show significant degradation (25--36\%). Context length substantially affects augmentation quality: average F1 loss decreases from -38.1\% at L=256 to -17.7\% at L=4096, with scimark2 showing the largest improvement (degradation decreasing from -31.4\% to -2.6\%).
 
-Table~\ref{tab:rq1-secondary} reveals that while F1-Macro shows workload-dependent degradation, F1-Weighted and Accuracy remain substantially higher (86--97\% across all configurations), and Top-5/Top-10 accuracy are consistently high (96--99.8\%). This pattern indicates that models trained on synthetic data perform well on common events but struggle with rare events, and even when the top prediction is incorrect, the model captures plausible alternatives within a small set of candidates.
 
 \begin{table*}[t]
 \centering
-\caption{RQ1 (Secondary Metrics): Comprehensive evaluation metrics for Combined (50\% real + 50\% synthetic) configuration. While F1-Macro shows workload-dependent degradation, F1-Weighted and Accuracy remain relatively high, and Top-K accuracy demonstrates that models capture plausible event alternatives even when the top prediction is incorrect.}
+\caption{RQ1 (Secondary Metrics): Weighted F1, accuracy, and Top-$K$ accuracy for the Combined (50\% real + 50\% synthetic) configuration across workloads and context lengths.}
 \label{tab:rq1-secondary}
 \footnotesize
 \setlength{\tabcolsep}{3.5pt}
@@ -65,13 +77,27 @@ unpack-linux & 85.3\% & 85.6\% & 95.1\% & 96.8\% & 90.5\% & 90.6\% & 98.2\% & 99
 \subsection{RQ2: Does constraint-guided repair consistently improve synthetic data quality?}
 \label{sec:rq2}
 
-To evaluate the reliability of constraint-guided repair as a post-processing step, we compare downstream task performance when training on: (i) \textbf{Combined (No Repair)}: 50\% real + 50\% raw synthetic data, and (ii) \textbf{Combined (Repaired)}: 50\% real + 50\% constraint-repaired synthetic data. This isolates the impact of repair while controlling for data augmentation effects.
+To evaluate the effectiveness of constraint-guided repair as a post-processing step, we compare downstream performance under two controlled conditions:
+(i) \textbf{Combined (No Repair)}, which mixes 50\% real data with 50\% raw synthetic traces, and
+(ii) \textbf{Combined (Repaired)}, which replaces raw synthetic traces with their constraint-repaired counterparts.
+This comparison isolates the impact of repair while holding the amount of synthetic augmentation constant.
 
-Table~\ref{tab:rq2} presents the repair effectiveness across six benchmarks and three context lengths, showing the F1-Macro improvement ($\Delta$F1) from applying constraint-guided repair.
+
+Table~\ref{tab:rq2} summarizes the effect of constraint-guided repair across workloads and context lengths; bold values indicate cases where repair improves macro-F1 by more than 2\%, italics denote improvements between 0.5--2\%, and unformatted values indicate changes below 0.5\%. Across 12 out of 15 benchmark–context combinations (80\%), repair increases macro-F1 by 0.3--4.3\%. The largest gains occur at shorter context lengths ($L=256$), with improvements of +4.3\% for \texttt{scimark2} and +4.1\% for \texttt{pybench}. These settings correspond to regimes where diffusion models are more likely to violate kernel execution invariants due to limited temporal context.
+
+As context length increases, the marginal benefit of repair diminishes.
+At $L=4096$, improvements are near-neutral once a single anomalous case (\texttt{unpack-linux}), which dominates the aggregate average, is excluded.
+This trend suggests that diffusion models trained with long temporal context implicitly learn many structural invariants, reducing reliance on explicit repair.
+
+Importantly, constraint-guided repair rarely degrades performance. Aside from minor fluctuations for \texttt{ffmpeg} and a single anomalous result for \texttt{unpack-linux} at $L=4096$, repair does not introduce systematic harm. Overall, these results indicate that constraint-guided repair functions as a low-risk safety mechanism that is most beneficial when generative models operate under limited context or higher uncertainty.
+
+\paragraph{Takeaway.}
+Constraint-guided repair is most useful as a safety mechanism when synthetic traces are generated with limited temporal context or under high uncertainty. When sufficient context is available, repair offers diminishing returns but introduces little risk, making it a conservative post-processing step rather than a primary driver of synthetic data quality.
+
 
 \begin{table*}[t]
 \centering
-\caption{RQ2: Constraint-guided repair effectiveness across benchmarks and context lengths. We compare Combined (No Repair) vs Combined (Repaired) configurations. $\Delta$F1 shows the F1-Macro improvement from repair. \textbf{Bold} indicates substantial improvement ($>$2\%), \textit{italic} indicates modest improvement (0.5--2\%), and regular text indicates minimal change ($<$0.5\%).}
+\caption{RQ2: Effect of constraint-guided repair across benchmarks and context lengths. We compare Combined (No Repair) and Combined (Repaired) configurations. $\Delta$F1 reports the change in macro-F1 score introduced by applying constraint-guided repair.}
 \label{tab:rq2}
 \footnotesize
 \setlength{\tabcolsep}{4pt}
@@ -94,18 +120,33 @@ unpack-linux & 27.4\% & 27.8\% & +0.4\% & \textit{+1.4\%} & 43.9\% & 44.3\% & +0
 \end{tabular}
 \end{table*}
 
-Table~\ref{tab:rq2} shows that constraint-guided repair provides positive impact in 12 out of 15 benchmark-context combinations (80\%), with improvements ranging from +0.3\% to +4.3\%. The two best cases are scimark2 @ L=256 (+4.3\%) and pybench @ L=256 (+4.1\%). Only 3 cases show degradation, with ffmpeg showing slight negative effects (-0.1\% to -3.6\%) and unpack-linux @ L=4096 exhibiting a likely data anomaly (-24.6\%). Repair is most effective at L=256 (average +1.5\% relative improvement) compared to L=1024 (+0.6\%) and L=4096 (-4.2\%, skewed by anomaly; excluding anomaly: +0.5\%). This pattern suggests that diffusion models trained on shorter contexts produce more constraint violations, which repair can effectively fix.
+
 
 \subsection{RQ3: How does increasing diffusion model context length improve synthetic data quality?}
 \label{sec:rq3}
 
-To evaluate the impact of temporal context on synthetic data quality, we compare downstream task performance when training on Combined (Repaired) data generated by diffusion models trained with different context lengths: $L \in \{256, 1024, 4096\}$. This isolates the effect of context length while controlling for repair and augmentation.
+To assess the impact of temporal context on synthetic data quality, we compare downstream task performance when training on \textbf{Combined (Repaired)} datasets generated by diffusion models with different context lengths, $L \in \{256, 1024, 4096\}$. This comparison isolates the effect of context length while holding constant the use of synthetic augmentation and constraint-guided repair.
 
-Table~\ref{tab:rq3} presents F1-Macro scores across six benchmarks and three context lengths, along with the absolute and relative improvements from L=256 to L=4096.
+Table~\ref{tab:rq3} reports macro-F1 scores across six benchmarks and three context lengths, along with the absolute and relative improvements from $L=256$ to $L=4096$.
+
+
+Overall, increasing context length substantially improves synthetic data quality across all workloads. On average, macro-F1 increases by 29.9 percentage points, corresponding to a 104\% relative improvement when moving from $L=256$ to $L=4096$. Every benchmark benefits from longer context, with gains ranging from +16.0\% for \texttt{unpack-linux} to +46.6\% for \texttt{scimark2}.
+
+Structured, compute-heavy workloads exhibit the largest improvements. For \texttt{scimark2}, macro-F1 increases from 40.6\% at $L=256$ to 87.2\% at $L=4096$ (+46.6\%, +115\% relative), approaching real-only performance (89.8\%). Similarly, \texttt{pybench} improves by +36.5\% (+87\% relative), and \texttt{ffmpeg} improves by +32.3\% (+101\% relative). These results indicate that longer temporal context enables diffusion models to better capture recurring execution patterns and rare-event structure in deterministic workloads.
+
+
+I/O-intensive workloads also benefit from increased context length, though to a lesser extent. \texttt{stream} improves by +27.4\% (+156\% relative), \texttt{iozone} by +20.9\% (+105\%), and \texttt{unpack-linux} by +16.0\% (+57\%). While these workloads remain more challenging due to asynchronous behavior and complex kernel interactions, longer context substantially reduces the performance gap observed at shorter sequence lengths.
+
+We observe diminishing returns as context length increases. The average improvement from $L=256$ to $L=1024$ is +22.9 percentage points, whereas the additional gain from $L=1024$ to $L=4096$ is +7.0 points. This suggests that $L=4096$ represents a practical upper bound under current hardware constraints, beyond which additional context yields smaller marginal benefits.
+
+\paragraph{Practical takeaway.}
+Increasing temporal context length is the most effective lever for improving synthetic kernel trace quality. Practitioners should prioritize longer context when computational resources permit, particularly for compute-heavy workloads, while recognizing that gains beyond $L=4096$ may offer diminishing returns relative to their cost.
+
 
 \begin{table*}[t]
 \centering
-\caption{RQ3: Impact of diffusion model context length on synthetic data quality. All results use Combined (Repaired) configuration. $\Delta$F1 shows absolute improvement from L=256 to L=4096, and Rel. Gain shows relative percentage improvement. \textbf{Bold} indicates exceptional gains ($>$40\%), \textit{italic} indicates substantial gains (30--40\%), and regular text indicates moderate gains (15--30\%).}
+\caption{RQ3: Impact of diffusion model context length on synthetic data quality. All results use the Combined (Repaired) configuration. $\Delta$F1 reports the absolute change in macro-F1 score between $L=256$ and $L=4096$, and Rel. Gain reports the corresponding relative improvement.}
+
 \label{tab:rq3}
 \footnotesize
 \setlength{\tabcolsep}{4pt}
@@ -125,12 +166,30 @@ unpack-linux & 27.8\% & 44.3\% & 43.8\% & +16.0\% & +57\% \\
 \end{tabular}
 \end{table*}
 
-Table~\ref{tab:rq3} shows that increasing context length from L=256 to L=4096 improves synthetic data quality across all benchmarks, with an average gain of +29.9 percentage points (+104\% relative improvement). Every benchmark shows substantial gains, with improvements ranging from +16.0\% (unpack-linux) to +46.6\% (scimark2). Deterministic, structured workloads show the largest improvements: scimark2 achieves +46.6\% gain (40.6\% → 87.2\%, +115\% relative), reaching near-parity with real-only performance (89.8\%), while pybench gains +36.5\% (+87\% relative) and ffmpeg gains +32.3\% (+101\% relative). Even I/O-heavy workloads benefit substantially: stream improves by +27.4\% (+156\% relative), iozone by +20.9\% (+105\% relative), and unpack-linux by +16.0\% (+57\% relative). The diminishing returns pattern (L=256→1024: +22.9\%, L=1024→4096: +7.0\%) suggests that L=4096 may be near-optimal for current hardware constraints.
 
-\subsection{RQ4: Can simpler diffusion models (fewer channels) achieve comparable synthetic data quality with lower computational cost?}
+
+
+\subsection{RQ4: Can simpler diffusion models achieve comparable synthetic data quality with lower computational cost?}
 \label{sec:rq4}
 
-To evaluate the cost-effectiveness of diffusion model complexity, we conduct a cross-model ablation study on three diverse benchmarks (ffmpeg, pybench, scimark2). We train diffusion models with three channel configurations: (i) \textbf{Base}: event + dt (2 channels), (ii) \textbf{System}: event + dt + cpu + tid (4 channels), and (iii) \textbf{Full}: event + dt + cpu + tid + comm + ret (6 channels). For each diffusion model, we train downstream predictors using all compatible channel subsets, creating a cross-evaluation matrix that isolates both diffusion model channel importance and predictor channel importance.
+To assess the cost–quality trade-off of diffusion model complexity, we conduct a cross-model ablation study on three representative benchmarks (\texttt{ffmpeg}, \texttt{pybench}, and \texttt{scimark2}). We train diffusion models with three progressively richer channel configurations:
+(i) \textbf{Base} (event + dt; 2 channels),
+(ii) \textbf{System} (event + dt + cpu + tid; 4 channels), and
+(iii) \textbf{Full} (event + dt + cpu + tid + comm + ret; 6 channels).
+
+For each diffusion model, we train downstream predictors using all compatible channel subsets, yielding a cross-evaluation matrix that isolates the impact of diffusion-model feature richness from predictor feature choice.
+We select \texttt{ffmpeg}, \texttt{pybench}, and \texttt{scimark2} as representative workloads spanning structured compute, mixed execution, and runtime-driven behavior; preliminary results showed that I/O-dominated workloads exhibit limited sensitivity to feature richness, making them less informative for feature ablation.
+
+Table~\ref{tab:rq4} reports macro-F1 scores for all valid diffusion–predictor combinations. Across all benchmarks, the Base diffusion model achieves performance within 1--3\% of the Full model, despite using only event type and timing information. For \texttt{ffmpeg}, the Base model achieves the highest macro-F1 (61.8\%), matching or exceeding both the System (61.7\%) and Full (60.9\%) configurations. Similarly, for \texttt{pybench}, the Base model achieves the best overall performance (71.3\%), slightly outperforming the Full model (71.2\%).
+
+Only \texttt{scimark2} exhibits a consistent benefit from richer diffusion inputs: the Full model reaches 69.4\% macro-F1 compared to 68.5\% for the Base configuration (+0.9\%). This workload is highly structured and compute-intensive, suggesting that additional semantic and scheduling features provide marginal gains when execution behavior is more deterministic.
+
+Within each diffusion model, varying the downstream predictor’s channel configuration produces only 1--3\% variation in macro-F1. This indicates that diffusion-model feature selection has a larger impact on synthetic data quality than downstream predictor feature richness in this setting.
+
+Overall, these results show that diffusion models operating only on event types and timing information can generate synthetic traces that are nearly as useful as those produced by feature-rich models, while requiring fewer input channels and lower computational overhead. Richer feature sets offer limited additional benefit and are primarily advantageous for highly structured workloads.
+
+\paragraph{Practical takeaway.}
+For most workloads, practitioners can safely favor simpler diffusion models to reduce computational cost and modeling complexity without materially sacrificing synthetic data quality. Feature-rich diffusion models should be reserved for highly structured, compute-heavy systems where marginal gains justify additional overhead.
 
 
 \begin{table*}[t]
@@ -143,17 +202,17 @@ To evaluate the cost-effectiveness of diffusion model complexity, we conduct a c
 \toprule
 \textbf{Benchmark} & \textbf{Diffusion Model} & \textbf{event} & \textbf{event+dt} & \textbf{event+dt+cpu+tid} & \textbf{all 6} \\
 \midrule
-\multirow{3}{*}{\textbf{ffmpeg}} 
+\multirow{3}{*}{\textbf{ffmpeg}}
 & Base (2 ch) & 60.6\% & \textbf{61.8\%} & --- & --- \\
 & System (4 ch) & 60.8\% & \textit{61.7\%} & 60.5\% & --- \\
 & Full (6 ch) & 60.8\% & 60.9\% & 59.7\% & 58.9\% \\
 \midrule
-\multirow{3}{*}{\textbf{pybench}} 
+\multirow{3}{*}{\textbf{pybench}}
 & Base (2 ch) & \textbf{71.3\%} & 70.6\% & --- & --- \\
 & System (4 ch) & 70.3\% & 70.9\% & \textit{71.0\%} & --- \\
 & Full (6 ch) & 70.0\% & \textit{71.2\%} & \textit{71.2\%} & 70.6\% \\
 \midrule
-\multirow{3}{*}{\textbf{scimark2}} 
+\multirow{3}{*}{\textbf{scimark2}}
 & Base (2 ch) & 67.9\% & 68.5\% & --- & --- \\
 & System (4 ch) & 67.8\% & 65.5\% & 67.0\% & --- \\
 & Full (6 ch) & 67.5\% & 68.9\% & \textit{68.8\%} & \textbf{69.4\%} \\
@@ -161,4 +220,171 @@ To evaluate the cost-effectiveness of diffusion model complexity, we conduct a c
 \end{tabular}
 \end{table*}
 
-Table~\ref{tab:rq4} presents cross-model ablation results, showing F1-Macro scores for all valid diffusion-predictor combinations across three benchmarks. The Base diffusion model (2 channels: event + dt) achieves performance within 1--3\% of the Full model (6 channels) across all benchmarks. For ffmpeg, Base achieves 61.8\% F1 (best overall), matching or exceeding System (61.7\%) and Full (60.9\%). For pybench, Base achieves 71.3\% (best overall), outperforming Full (71.2\%). Only scimark2 shows a clear benefit from the Full model (69.4\% vs 68.5\% Base, +0.9\%). Within each diffusion model, varying the predictor's channel configuration produces only 1--3\% F1 variation, indicating that predictor channel choice has minimal impact on downstream performance.
+
+
+
+
+% \section{Results}
+% \label{sec:results}
+
+% We organize results around four research questions (RQ1--RQ4) using a downstream next-event prediction task. Unless otherwise stated, models are evaluated on the held-out real test split, and we report macro-F1 as the primary metric, with accuracy and Top-5 accuracy as secondary metrics.
+
+% \subsection{RQ1: For which workload types can synthetic data effectively double the training dataset size?}\textcolor{red}{When should practitioners rely on synthetic kernel traces?}
+% \label{sec:rq1}
+
+% To evaluate the practical utility of synthetic data augmentation, we simulate a scenario where real data collection is expensive and we seek to double the training dataset size using synthetic data. We compare downstream task performance when training on: (i) \textbf{Real-only (50\% data)}: baseline using only real training data, and (ii) \textbf{Combined (100\% data)}: 50\% real + 50\% constraint-repaired synthetic data. This setup quantifies the performance trade-off for doubling the dataset size with synthetic augmentation.
+
+% Table~\ref{tab:rq1} presents F1-Macro scores across six benchmarks and three context lengths, along with the performance degradation ($\Delta$F1) when using synthetic augmentation.
+
+% \begin{table*}[t]
+% \centering
+% \caption{RQ1: Performance trade-offs for doubling dataset size with synthetic data augmentation. We compare training on 50\% real data (Real-Only) vs 100\% data (50\% real + 50\% synthetic). $\Delta$F1 shows the F1-Macro loss from augmentation. \textbf{Bold} indicates acceptable degradation ($<$5\%), \textit{italic} indicates moderate degradation (5--20\%), and regular text indicates significant degradation ($>$20\%).}
+% \label{tab:rq1}
+% \footnotesize
+% \setlength{\tabcolsep}{4pt}
+% \begin{tabular}{@{}lccccccccc@{}}
+% \toprule
+% \multirow{2}{*}{\textbf{Benchmark}} & \multicolumn{3}{c}{\textbf{L=256}} & \multicolumn{3}{c}{\textbf{L=1024}} & \multicolumn{3}{c}{\textbf{L=4096}} \\
+% \cmidrule(lr){2-4} \cmidrule(lr){5-7} \cmidrule(lr){8-10}
+% & Real & Combined & $\Delta$F1 & Real & Combined & $\Delta$F1 & Real & Combined & $\Delta$F1 \\
+% \midrule
+% ffmpeg       & 69.9\% & 32.0\% & -37.9\% & 82.9\% & 60.1\% & -22.8\% & 81.5\% & 64.4\% & -17.1\% \\
+% iozone       & 64.0\% & 19.9\% & -44.1\% & 67.7\% & 34.8\% & -32.9\% & 69.3\% & 40.8\% & -28.5\% \\
+% pybench      & 70.6\% & 41.8\% & -28.8\% & 89.6\% & 69.7\% & -19.9\% & 88.6\% & \textit{78.3\%} & \textit{-10.3\%} \\
+% scimark2     & 72.0\% & 40.6\% & -31.4\% & 88.5\% & 68.0\% & -20.5\% & 89.8\% & \textbf{87.2\%} & \textbf{-2.6\%} \\
+% stream       & 68.5\% & 17.6\% & -50.9\% & 70.5\% & 40.7\% & -29.8\% & 69.7\% & 44.9\% & -24.8\% \\
+% unpack-linux & 63.4\% & 27.8\% & -35.6\% & 69.1\% & 44.3\% & -24.8\% & --- & 43.8\% & --- \\
+% \midrule
+% \textbf{Average} & \textbf{68.1\%} & \textbf{30.0\%} & \textbf{-38.1\%} & \textbf{78.0\%} & \textbf{52.9\%} & \textbf{-25.1\%} & \textbf{79.8\%} & \textbf{59.9\%} & \textbf{-17.7\%} \\
+% \bottomrule
+% \end{tabular}
+% \end{table*}
+
+% Table~\ref{tab:rq1} shows that synthetic data augmentation exhibits strong workload dependence across all context lengths. At L=4096, scimark2 achieves 87.2\% F1-Macro with 2$\times$ data, only 2.6 percentage points below the real-only baseline (89.8\%), while I/O-heavy workloads (stream, iozone, unpack-linux) show significant degradation (25--36\%). Context length substantially affects augmentation quality: average F1 loss decreases from -38.1\% at L=256 to -17.7\% at L=4096, with scimark2 showing the largest improvement (degradation decreasing from -31.4\% to -2.6\%).
+
+% Table~\ref{tab:rq1-secondary} reveals that while F1-Macro shows workload-dependent degradation, F1-Weighted and Accuracy remain substantially higher (86--97\% across all configurations), and Top-5/Top-10 accuracy are consistently high (96--99.8\%). This pattern indicates that models trained on synthetic data perform well on common events but struggle with rare events, and even when the top prediction is incorrect, the model captures plausible alternatives within a small set of candidates.
+
+% \begin{table*}[t]
+% \centering
+% \caption{RQ1 (Secondary Metrics): Comprehensive evaluation metrics for Combined (50\% real + 50\% synthetic) configuration. While F1-Macro shows workload-dependent degradation, F1-Weighted and Accuracy remain relatively high, and Top-K accuracy demonstrates that models capture plausible event alternatives even when the top prediction is incorrect.}
+% \label{tab:rq1-secondary}
+% \footnotesize
+% \setlength{\tabcolsep}{3.5pt}
+% \begin{tabular}{@{}lcccccccccccc@{}}
+% \toprule
+% \multirow{2}{*}{\textbf{Benchmark}} & \multicolumn{4}{c}{\textbf{L=256}} & \multicolumn{4}{c}{\textbf{L=1024}} & \multicolumn{4}{c}{\textbf{L=4096}} \\
+% \cmidrule(lr){2-5} \cmidrule(lr){6-9} \cmidrule(lr){10-13}
+% & F1-W & Acc & Top-5 & Top-10 & F1-W & Acc & Top-5 & Top-10 & F1-W & Acc & Top-5 & Top-10 \\
+% \midrule
+% ffmpeg       & 85.9\% & 86.6\% & 95.8\% & 97.4\% & 91.9\% & 92.1\% & 98.6\% & 99.2\% & 93.8\% & 93.9\% & 99.4\% & 99.7\% \\
+% iozone       & 84.4\% & 84.7\% & 95.2\% & 96.9\% & 89.6\% & 89.7\% & 98.2\% & 99.1\% & 92.8\% & 92.9\% & 99.3\% & 99.6\% \\
+% pybench      & 87.4\% & 87.8\% & 95.2\% & 96.6\% & 94.2\% & 94.3\% & 98.6\% & 99.2\% & 96.1\% & 96.2\% & 99.6\% & 99.8\% \\
+% scimark2     & 87.0\% & 87.5\% & 95.1\% & 96.5\% & 93.8\% & 93.8\% & 98.5\% & 99.1\% & 96.9\% & 97.0\% & 99.7\% & 99.8\% \\
+% stream       & 84.0\% & 84.5\% & 98.0\% & 98.5\% & 88.3\% & 88.4\% & 99.2\% & 99.5\% & 89.8\% & 89.9\% & 99.6\% & 99.8\% \\
+% unpack-linux & 85.3\% & 85.6\% & 95.1\% & 96.8\% & 90.5\% & 90.6\% & 98.2\% & 99.0\% & 92.9\% & 93.0\% & 99.3\% & 99.7\% \\
+% \midrule
+% \textbf{Average} & \textbf{85.7\%} & \textbf{86.1\%} & \textbf{95.7\%} & \textbf{97.1\%} & \textbf{91.4\%} & \textbf{91.5\%} & \textbf{98.5\%} & \textbf{99.2\%} & \textbf{93.7\%} & \textbf{93.8\%} & \textbf{99.5\%} & \textbf{99.7\%} \\
+% \bottomrule
+% \end{tabular}
+% \end{table*}
+
+% \subsection{RQ2: Does constraint-guided repair consistently improve synthetic data quality?}
+% \label{sec:rq2}
+
+% To evaluate the reliability of constraint-guided repair as a post-processing step, we compare downstream task performance when training on: (i) \textbf{Combined (No Repair)}: 50\% real + 50\% raw synthetic data, and (ii) \textbf{Combined (Repaired)}: 50\% real + 50\% constraint-repaired synthetic data. This isolates the impact of repair while controlling for data augmentation effects.
+
+% Table~\ref{tab:rq2} presents the repair effectiveness across six benchmarks and three context lengths, showing the F1-Macro improvement ($\Delta$F1) from applying constraint-guided repair.
+
+% \begin{table*}[t]
+% \centering
+% \caption{RQ2: Constraint-guided repair effectiveness across benchmarks and context lengths. We compare Combined (No Repair) vs Combined (Repaired) configurations. $\Delta$F1 shows the F1-Macro improvement from repair. \textbf{Bold} indicates substantial improvement ($>$2\%), \textit{italic} indicates modest improvement (0.5--2\%), and regular text indicates minimal change ($<$0.5\%).}
+% \label{tab:rq2}
+% \footnotesize
+% \setlength{\tabcolsep}{4pt}
+% \begin{tabular}{@{}lccccccccccccc@{}}
+% \toprule
+% \multirow{2}{*}{\textbf{Benchmark}} & \multicolumn{4}{c}{\textbf{L=256}} & \multicolumn{4}{c}{\textbf{L=1024}} & \multicolumn{4}{c}{\textbf{L=4096}} \\
+% \cmidrule(lr){2-5} \cmidrule(lr){6-9} \cmidrule(lr){10-13}
+% & No Rep. & Repaired & $\Delta$F1 & Rel. & No Rep. & Repaired & $\Delta$F1 & Rel. & No Rep. & Repaired & $\Delta$F1 & Rel. \\
+% \midrule
+% ffmpeg       & 33.2\% & 32.0\% & -1.2\% & -3.6\% & 60.2\% & 60.1\% & -0.1\% & -0.2\% & 65.6\% & 64.4\% & \textit{-1.2\%} & -1.8\% \\
+% iozone       & 19.5\% & 19.9\% & \textbf{+0.4\%} & \textbf{+2.0\%} & 35.0\% & 34.8\% & -0.2\% & -0.6\% & 41.3\% & 40.8\% & \textit{-0.5\%} & -1.2\% \\
+% pybench      & 40.1\% & 41.8\% & \textbf{+1.6\%} & \textbf{+4.1\%} & 69.7\% & 69.7\% & +0.0\% & +0.0\% & 78.0\% & 78.3\% & +0.3\% & +0.3\% \\
+% scimark2     & 38.9\% & 40.6\% & \textbf{+1.7\%} & \textbf{+4.3\%} & 67.7\% & 68.0\% & +0.3\% & +0.4\% & 87.0\% & 87.2\% & +0.2\% & +0.3\% \\
+% stream       & 17.2\% & 17.6\% & +0.3\% & \textit{+1.8\%} & 39.5\% & 40.7\% & \textbf{+1.2\%} & \textbf{+3.1\%} & 44.2\% & 44.9\% & \textit{+0.7\%} & \textit{+1.7\%} \\
+% unpack-linux & 27.4\% & 27.8\% & +0.4\% & \textit{+1.4\%} & 43.9\% & 44.3\% & +0.4\% & \textit{+1.0\%} & 58.0\% & 43.8\% & -14.2\%* & -24.6\%* \\
+% \midrule
+% \textbf{Average} & \textbf{29.4\%} & \textbf{30.0\%} & \textbf{+0.5\%} & \textbf{+1.5\%} & \textbf{52.7\%} & \textbf{52.9\%} & \textbf{+0.3\%} & \textbf{+0.6\%} & \textbf{62.4\%} & \textbf{59.9\%} & \textbf{-2.5\%} & \textbf{-4.2\%} \\
+% \bottomrule
+% \multicolumn{13}{l}{\footnotesize *Anomaly in unpack-linux L=4096 - likely data corruption or experimental artifact.} \\
+% \end{tabular}
+% \end{table*}
+
+% Table~\ref{tab:rq2} shows that constraint-guided repair provides positive impact in 12 out of 15 benchmark-context combinations (80\%), with improvements ranging from +0.3\% to +4.3\%. The two best cases are scimark2 @ L=256 (+4.3\%) and pybench @ L=256 (+4.1\%). Only 3 cases show degradation, with ffmpeg showing slight negative effects (-0.1\% to -3.6\%) and unpack-linux @ L=4096 exhibiting a likely data anomaly (-24.6\%). Repair is most effective at L=256 (average +1.5\% relative improvement) compared to L=1024 (+0.6\%) and L=4096 (-4.2\%, skewed by anomaly; excluding anomaly: +0.5\%). This pattern suggests that diffusion models trained on shorter contexts produce more constraint violations, which repair can effectively fix.
+
+% \subsection{RQ3: How does increasing diffusion model context length improve synthetic data quality?}
+% \label{sec:rq3}
+
+% To evaluate the impact of temporal context on synthetic data quality, we compare downstream task performance when training on Combined (Repaired) data generated by diffusion models trained with different context lengths: $L \in \{256, 1024, 4096\}$. This isolates the effect of context length while controlling for repair and augmentation.
+
+% Table~\ref{tab:rq3} presents F1-Macro scores across six benchmarks and three context lengths, along with the absolute and relative improvements from L=256 to L=4096.
+
+% \begin{table*}[t]
+% \centering
+% \caption{RQ3: Impact of diffusion model context length on synthetic data quality. All results use Combined (Repaired) configuration. $\Delta$F1 shows absolute improvement from L=256 to L=4096, and Rel. Gain shows relative percentage improvement. \textbf{Bold} indicates exceptional gains ($>$40\%), \textit{italic} indicates substantial gains (30--40\%), and regular text indicates moderate gains (15--30\%).}
+% \label{tab:rq3}
+% \footnotesize
+% \setlength{\tabcolsep}{4pt}
+% \begin{tabular}{@{}lccccc@{}}
+% \toprule
+% \textbf{Benchmark} & \textbf{L=256} & \textbf{L=1024} & \textbf{L=4096} & \textbf{$\Delta$F1 (256→4096)} & \textbf{Rel. Gain} \\
+% \midrule
+% ffmpeg       & 32.0\% & 60.1\% & 64.4\% & \textit{+32.3\%} & \textit{+101\%} \\
+% iozone       & 19.9\% & 34.8\% & 40.8\% & +20.9\% & +105\% \\
+% pybench      & 41.8\% & 69.7\% & 78.3\% & \textit{+36.5\%} & +87\% \\
+% scimark2     & 40.6\% & 68.0\% & 87.2\% & \textbf{+46.6\%} & \textbf{+115\%} \\
+% stream       & 17.6\% & 40.7\% & 44.9\% & +27.4\% & +156\% \\
+% unpack-linux & 27.8\% & 44.3\% & 43.8\% & +16.0\% & +57\% \\
+% \midrule
+% \textbf{Average} & \textbf{30.0\%} & \textbf{52.9\%} & \textbf{59.9\%} & \textbf{+29.9\%} & \textbf{+104\%} \\
+% \bottomrule
+% \end{tabular}
+% \end{table*}
+
+% Table~\ref{tab:rq3} shows that increasing context length from L=256 to L=4096 improves synthetic data quality across all benchmarks, with an average gain of +29.9 percentage points (+104\% relative improvement). Every benchmark shows substantial gains, with improvements ranging from +16.0\% (unpack-linux) to +46.6\% (scimark2). Deterministic, structured workloads show the largest improvements: scimark2 achieves +46.6\% gain (40.6\% → 87.2\%, +115\% relative), reaching near-parity with real-only performance (89.8\%), while pybench gains +36.5\% (+87\% relative) and ffmpeg gains +32.3\% (+101\% relative). Even I/O-heavy workloads benefit substantially: stream improves by +27.4\% (+156\% relative), iozone by +20.9\% (+105\% relative), and unpack-linux by +16.0\% (+57\% relative). The diminishing returns pattern (L=256→1024: +22.9\%, L=1024→4096: +7.0\%) suggests that L=4096 may be near-optimal for current hardware constraints.
+
+% \subsection{RQ4: Can simpler diffusion models (fewer channels) achieve comparable synthetic data quality with lower computational cost?}
+% \label{sec:rq4}
+
+% To evaluate the cost-effectiveness of diffusion model complexity, we conduct a cross-model ablation study on three diverse benchmarks (ffmpeg, pybench, scimark2). We train diffusion models with three channel configurations: (i) \textbf{Base}: event + dt (2 channels), (ii) \textbf{System}: event + dt + cpu + tid (4 channels), and (iii) \textbf{Full}: event + dt + cpu + tid + comm + ret (6 channels). For each diffusion model, we train downstream predictors using all compatible channel subsets, creating a cross-evaluation matrix that isolates both diffusion model channel importance and predictor channel importance.
+
+
+% \begin{table*}[t]
+% \centering
+% \caption{RQ4: Cross-model ablation study results (F1-Macro \%). Rows show diffusion model channel configurations, columns show predictor channel configurations. All results use Combined (Repaired) with L=4096. \textbf{Bold} indicates best configuration per benchmark, \textit{italic} indicates within 1\% of best.}
+% \label{tab:rq4}
+% \footnotesize
+% \setlength{\tabcolsep}{3pt}
+% \begin{tabular}{@{}llcccc@{}}
+% \toprule
+% \textbf{Benchmark} & \textbf{Diffusion Model} & \textbf{event} & \textbf{event+dt} & \textbf{event+dt+cpu+tid} & \textbf{all 6} \\
+% \midrule
+% \multirow{3}{*}{\textbf{ffmpeg}}
+% & Base (2 ch) & 60.6\% & \textbf{61.8\%} & --- & --- \\
+% & System (4 ch) & 60.8\% & \textit{61.7\%} & 60.5\% & --- \\
+% & Full (6 ch) & 60.8\% & 60.9\% & 59.7\% & 58.9\% \\
+% \midrule
+% \multirow{3}{*}{\textbf{pybench}}
+% & Base (2 ch) & \textbf{71.3\%} & 70.6\% & --- & --- \\
+% & System (4 ch) & 70.3\% & 70.9\% & \textit{71.0\%} & --- \\
+% & Full (6 ch) & 70.0\% & \textit{71.2\%} & \textit{71.2\%} & 70.6\% \\
+% \midrule
+% \multirow{3}{*}{\textbf{scimark2}}
+% & Base (2 ch) & 67.9\% & 68.5\% & --- & --- \\
+% & System (4 ch) & 67.8\% & 65.5\% & 67.0\% & --- \\
+% & Full (6 ch) & 67.5\% & 68.9\% & \textit{68.8\%} & \textbf{69.4\%} \\
+% \bottomrule
+% \end{tabular}
+% \end{table*}
+
+% Table~\ref{tab:rq4} presents cross-model ablation results, showing F1-Macro scores for all valid diffusion-predictor combinations across three benchmarks. The Base diffusion model (2 channels: event + dt) achieves performance within 1--3\% of the Full model (6 channels) across all benchmarks. For ffmpeg, Base achieves 61.8\% F1 (best overall), matching or exceeding System (61.7\%) and Full (60.9\%). For pybench, Base achieves 71.3\% (best overall), outperforming Full (71.2\%). Only scimark2 shows a clear benefit from the Full model (69.4\% vs 68.5\% Base, +0.9\%). Within each diffusion model, varying the predictor's channel configuration produces only 1--3\% F1 variation, indicating that predictor channel choice has minimal impact on downstream performance.

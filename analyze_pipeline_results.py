@@ -441,7 +441,7 @@ def main():
     parser.add_argument('--base-dir', default='experiments_downstream_results',
                        help='Base directory containing results')
     parser.add_argument('--benchmarks', nargs='+', 
-                       default=['ffmpeg', 'pybench', 'scimark2', 'stream', 'unpack-linux'],
+                       default=['ffmpeg', 'pybench', 'scimark2', 'stream', 'unpack-linux' 'iozone'],
                        help='Benchmarks to analyze')
     parser.add_argument('--output-dir', default='experiments_downstream_results/results-pipeline',
                        help='Output directory for analysis results')

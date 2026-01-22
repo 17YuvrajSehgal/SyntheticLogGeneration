@@ -1,0 +1,13 @@
+\section{Limitations and Threats to Validity}\label{sec:limitations-and-threats-to-validity}
+
+\textbf{Benchmark diversity.} Our evaluation focuses on six benchmarks from the Phoronix Test Suite. While these benchmarks span diverse workload types (video encoding, I/O, numerical computation, memory bandwidth, archive extraction), they may not fully represent production system behavior. Future work should validate findings on real-world production traces from cloud services, databases, or web servers.
+
+\textbf{Downstream task specificity.} We evaluate synthetic data quality using next-event prediction, which may not fully capture trace utility for other tasks (anomaly detection, performance prediction, trace clustering). Different downstream tasks may exhibit different sensitivities to synthetic data quality.
+
+\textbf{Context length constraints.} Our maximum context length (L=4096) is limited by GPU memory constraints. Longer contexts may further improve quality, but we cannot validate this hypothesis with current hardware. Future work with sparse attention or model parallelism could explore L=8192 or beyond.
+
+\textbf{Single diffusion architecture.} We use a standard Transformer-based diffusion model. Alternative architectures (convolutional, recurrent, state-space models) may offer different quality-efficiency trade-offs. Our findings may not generalize to all diffusion model designs.
+
+\textbf{Repair strategy limitations.} Our constraint-guided repair uses greedy forward search with learned transition rules. More sophisticated repair strategies (beam search, reinforcement learning, constraint satisfaction solvers) might achieve larger improvements, though at higher computational cost.
+
+Despite these limitations, our findings provide actionable guidance for practitioners and identify clear directions for future research. The scimark2 result (87.2\% F1, only 2.6\% below real) demonstrates that diffusion-based synthetic trace generation is \textit{viable} for production use when workload characteristics, context length, and repair are properly configured.

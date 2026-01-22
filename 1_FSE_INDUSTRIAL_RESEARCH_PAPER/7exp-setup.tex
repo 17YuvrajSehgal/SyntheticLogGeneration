@@ -1,20 +1,29 @@
-\section{Experimental Setup}
-\label{sec:experiments}
+\section{Evaluation}
+\label{sec:evaluation}
 
-This section describes the compute environment, datasets, experimental design, and sampling procedure used to evaluate the proposed diffusion-based kernel trace generator. All experiments use a unified training and generation pipeline and differ only in controlled variables such as temporal context length and feature availability.
+This section evaluates the effectiveness, robustness, and cost–quality trade-offs of \textsc{SynthTrace}. Our evaluation is structured around four research questions:
+
+\begin{itemize}[leftmargin=*]
+  \item \textbf{RQ1:} When can synthetic kernel traces safely augment limited real training data?
+  \item \textbf{RQ2:} Does constraint-guided repair consistently improve synthetic data quality?
+  \item \textbf{RQ3:} How does increasing diffusion model context length affect synthetic data quality?
+  \item \textbf{RQ4:} Can simpler diffusion models achieve comparable quality with lower computational cost?
+\end{itemize}
+
+All research questions are evaluated using a controlled downstream next-event prediction task on held-out real kernel traces. This setup enables direct assessment of whether models trained on synthetic data generalize to real system behavior.
 
 \subsection{Compute Environment and Datasets}
 
-All experiments were executed on the Nibi high-performance computing cluster. Each training and sampling job was allocated a single NVIDIA H100 GPU with 80\,GB of device memory, along with 8 CPU cores and 32\,GB of host memory. Mixed-precision training with \texttt{bf16} and TF32 acceleration was enabled to maximize throughput and maintain numerical stability on H100-class hardware.
+All experiments were executed on the Nibi high-performance computing cluster. Each training and sampling job was allocated a single NVIDIA H100 GPU with 80\,GB of device memory, along with 8 CPU cores and 32\,GB of host memory. Mixed-precision training with \texttt{bf16} and TF32 acceleration was enabled to maximize throughput while maintaining numerical stability.
 
-We use windowed NPZ datasets derived from real LTTng kernel traces, as described in Section~\ref{sec:windowing}. Each dataset consists of fixed-length sequences extracted from the \texttt{all-events} tracing configuration and split into training, validation, and test partitions. Unless otherwise stated, experiments are conducted on the \texttt{scimark2} benchmark, which exhibits a diverse mix of compute, scheduling, and memory behavior and is commonly used in systems performance analysis.
+We use windowed NPZ datasets derived from real LTTng kernel traces, as described in Section~\ref{sec:data-preprocessing}. Each dataset consists of fixed-length event sequences extracted from the \texttt{all-events} tracing configuration and split into training, validation, and test partitions. Unless otherwise stated, experiments are conducted on the \texttt{scimark2} benchmark, which we use as a representative workload due to its diverse compute, scheduling, and memory behavior.
 
 \subsection{Model and Training Configuration}
 \label{sec:model-config}
 
-All experiments use the same diffusion-model architecture in order to isolate the effects of data representation and temporal context. The denoising network is a Transformer encoder with $d_{\text{model}}=512$, 8 attention heads, and 8 layers. The diffusion process uses $T=1000$ timesteps with a linear noise schedule. Optimization is performed using AdamW with a cosine learning-rate schedule. Aside from the experimental variables described below, all architectural and optimization hyperparameters are held constant across runs.
+All experiments use the same diffusion-model architecture to isolate the effects of temporal context length and feature availability. The denoising network is a Transformer encoder with embedding dimension $d_{\text{model}}=256$, 4--8 attention heads, and 4--8 layers depending on configuration. The diffusion process uses $T=1000$ timesteps with a linear noise schedule from $\beta_{\text{start}}=10^{-4}$ to $\beta_{\text{end}}=0.02$.
 
-Table~\ref{tab:hyperparams} summarizes the model and training hyperparameters shared by all experiments.
+Models are optimized using AdamW with an initial learning rate of $2 \times 10^{-4}$ and cosine decay. Aside from the experimental variables described below, all architectural and optimization hyperparameters are held constant across runs. Table~\ref{tab:hyperparams} summarizes the shared configuration.
 
 \begin{table}[t]
 \centering
@@ -25,30 +34,29 @@ Table~\ref{tab:hyperparams} summarizes the model and training hyperparameters sh
 \textbf{Parameter} & \textbf{Value} \\
 \midrule
 Model type & Transformer-based diffusion model \\
-Embedding dimension ($d_{\text{model}}$) & 512 \\
-Number of Transformer layers & 8 \\
-Number of attention heads & 8 \\
+Embedding dimension ($d_{\text{model}}$) & 256 \\
+Number of Transformer layers & 4--8 \\
+Number of attention heads & 4--8 \\
 Diffusion steps ($T$) & 1000 \\
 Noise schedule & Linear $\beta$-schedule \\
 Optimizer & AdamW \\
+Learning rate & $2 \times 10^{-4}$ \\
 Learning-rate schedule & Cosine decay \\
-Precision & bf16 (with TF32 enabled) \\
+Precision & bf16 (TF32 enabled) \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \subsection{Experimental Design}
 
-We conduct two complementary experimental studies: a \emph{context-length study} to evaluate scalability with respect to temporal context, and a \emph{feature ablation study} to quantify the contribution of system-level metadata.
+We conduct two complementary experimental studies designed to answer RQ3 and RQ4, respectively.
 
-\paragraph{Context-Length Study.}
-To assess the impact of temporal context on generative fidelity, we train separate models using the full feature set (\texttt{event}, \texttt{dt}, \texttt{cpu}, \texttt{tid}, \texttt{comm}, \texttt{ret}) at three fixed sequence lengths: short (256), medium (1024), and long (4096). Batch sizes are adjusted per configuration to fit GPU memory constraints while maintaining comparable token throughput.
-
-Table~\ref{tab:context-configs} summarizes the context-length configurations used in this study.
+\paragraph{Context-Length Study (RQ3).}
+To evaluate the impact of temporal context on synthetic trace quality, we train diffusion models using the full feature set (\texttt{event}, \texttt{dt}, \texttt{cpu}, \texttt{tid}, \texttt{comm}, \texttt{ret}) at three fixed sequence lengths: $L \in \{256, 1024, 4096\}$. Batch sizes are adjusted to fit GPU memory constraints while maintaining comparable token throughput. Table~\ref{tab:context-configs} summarizes the configurations.
 
 \begin{table}[t]
 \centering
-\caption{Context-length configurations for the scalability study.}
+\caption{Context-length configurations used in the scalability study.}
 \label{tab:context-configs}
 \footnotesize
 \setlength{\tabcolsep}{4pt}
@@ -56,26 +64,19 @@ Table~\ref{tab:context-configs} summarizes the context-length configurations use
 \toprule
 Configuration & $L$ & Batch & Tokens/batch \\
 \midrule
-Short context  & 256  & 256 & 65{,}536 \\
-Medium context & 1024 & 128 & 131{,}072 \\
-Long context   & 4096 & 32  & 131{,}072 \\
+Short context  & 256  & 64 & 16{,}384 \\
+Medium context & 1024 & 64 & 65{,}536 \\
+Long context   & 4096 & 8  & 32{,}768 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-
-
-
-This design enables a controlled comparison of short- and long-range dependency modeling while keeping all other architectural and optimization factors constant.
-
-\paragraph{Feature Ablation Study.}
-To isolate the effect of feature availability, we conduct a feature ablation study at a fixed sequence length of $L=1024$. We select $L=1024$ as a representative mid-range context that balances temporal coverage and computational cost: it is substantially longer than short-context settings while avoiding the high memory and training-time overhead of long-context configurations. Since context length is evaluated independently in the context-length study, fixing $L=1024$ prevents confounding the impact of feature removal with changes in temporal context.
-
-At this fixed context length, we train separate models using progressively richer feature sets derived from the windowed NPZ representation. Table~\ref{tab:ablation-configs} summarizes the three ablation configurations used in our experiments.
+\paragraph{Feature Ablation Study (RQ4).}
+To assess the cost–quality trade-off of diffusion model complexity, we conduct a feature ablation study at a fixed sequence length of $L=4096$. Fixing context length avoids confounding feature effects with insufficient temporal context. We train models using progressively richer feature sets, summarized in Table~\ref{tab:ablation-configs}.
 
 \begin{table}[t]
 \centering
-\caption{Feature ablation configurations (fixed sequence length $L=1024$).}
+\caption{Feature ablation configurations (fixed $L=4096$).}
 \label{tab:ablation-configs}
 \begin{tabular}{lcccccc}
 \toprule
@@ -88,35 +89,235 @@ Feature-rich  & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark &
 \end{tabular}
 \end{table}
 
-This ablation isolates the contribution of scheduling context (CPU and thread identifiers) and semantic process metadata (command names and return values) to kernel trace realism and system-level validity.
+\subsection{Sampling and Synthetic Data Generation}
 
+For each trained diffusion model, we generate synthetic kernel traces using DDIM sampling with 50 denoising steps starting from Gaussian noise. For each configuration, we generate 10{,}000 synthetic samples and store them in the same windowed NPZ format as real traces, ensuring identical downstream preprocessing.
 
-\subsection{Sampling and Generation Protocol}
+\paragraph{Constraint Reference.}
+System-level validity is assessed using a universal constraint knowledge base mined from all real NPZ shards (training, validation, and test) using parallel processing. All repair experiments and validity measurements use the same file to ensure consistent and reproducible evaluation (RQ2).
 
-For each trained model, we generate synthetic kernel traces using the reverse diffusion process. Sampling starts from Gaussian noise and iteratively denoises for $T=1000$ steps. For consistency, models are re-instantiated with the same architectural hyperparameters used during training, and the corresponding checkpoints are loaded. Discrete channels are decoded using argmax over predicted logits, while continuous time-delta values are generated directly from the model output.
+\subsection{Downstream Task Evaluation}
+\label{sec:downstream-eval}
 
-Synthetic traces are generated for all context-length and feature-ablation configurations and stored in the same windowed NPZ format as the real traces. These generated traces are evaluated independently against real data to assess how training and sampling configurations affect downstream fidelity and system-level validity metrics.
+All research questions are evaluated using a downstream next-event prediction task. This task measures whether predictors trained on synthetic traces can generalize to real kernel execution behavior.
 
-\paragraph{Constraint reference for evaluation.}
-In addition to distributional comparisons against real traces, we evaluate system validity using a universal constraint knowledge base learned from the complete set of real NPZ shards (train/validation/test across dataset variants). All reported validity scores and repair experiments use the same \texttt{constraints\_universal.json} file to ensure consistent and reproducible assessment across models and configurations.
+\paragraph{Task Definition.}
+Given a sequence of $L_{\text{pred}}=128$ consecutive kernel events, the model predicts the next event type (384-way classification). This task requires modeling both local event patterns and longer-range system dependencies.
 
-\subsection{Training Dynamics}
+\paragraph{Predictor Architecture.}
+The downstream predictor is a Transformer-based classifier with $d_{\text{model}}=256$, 8 attention heads, and 4 layers. For multi-channel inputs, features are embedded separately, concatenated, and fused via a linear projection. The final hidden state is passed through a two-layer MLP to produce event logits.
 
-Training progress is monitored using TensorBoard, tracking the total diffusion loss as well as its latent and reconstruction components. Figure~\ref{fig:training-curves} shows representative training curves with and without exponential smoothing, demonstrating stable optimization and consistent convergence across all loss components.
-
-To further compare convergence behavior across context-length configurations, Figure~\ref{fig:relative-training} presents the same losses visualized using TensorBoard’s relative-time view. These plots confirm that models trained with longer context lengths converge more slowly, as expected, but exhibit similarly smooth and monotonic loss reduction, indicating that increased temporal context does not introduce optimization instability.
-
+\paragraph{Training Configuration.}
+Predictors are trained for up to 20 epochs using AdamW ($\text{lr}=10^{-4}$) with cross-entropy loss. Training employs sliding windows with stride 64, batch size 64, and early stopping with patience 3 based on validation macro-F1. All predictors are evaluated on the same held-out real test set.
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=\linewidth]{figures/loss_grid_comparison_compact.png}
-  \caption{Training dynamics of the diffusion model.}
-  \label{fig:training-curves}
+  \includegraphics[width=\columnwidth]{figures/2bg-cropped.png}
+  \caption{Downstream evaluation protocol. Independent predictors are trained on real-only, synthetic-only, and repaired synthetic data, and evaluated on the same held-out real test set.}
+  \label{fig:downstream-eval}
+\end{figure}
+
+\paragraph{Training Set Configurations.}
+For each diffusion model configuration, downstream predictors are trained under four data conditions:
+(i) \textbf{Real-only} (baseline),
+(ii) \textbf{Synthetic-only},
+(iii) \textbf{Combined (Repaired)}: a 50/50 mix of real and constraint-repaired synthetic traces, and
+(iv) \textbf{Combined (No Repair)}: a 50/50 mix of real and unrepaired synthetic traces.
+All predictors are evaluated on the same real-only test set to ensure fair and consistent comparison.
+
+\subsection{Evaluation Metrics}
+\label{sec:evaluation-metrics}
+
+We evaluate downstream predictor performance using multiple complementary metrics, each capturing a different aspect of prediction quality. All metrics are computed on the same held-out real test set to assess how well models trained on synthetic data generalize to real system behavior.
+
+\paragraph{F1-Score (Macro).}
+Our primary evaluation metric is the macro-averaged F1-score, which treats all event classes equally regardless of their frequency. For each event class $c$, we compute precision and recall as:
+\[
+\text{Precision}_c = \frac{\text{TP}_c}{\text{TP}_c + \text{FP}_c}, \quad
+\text{Recall}_c = \frac{\text{TP}_c}{\text{TP}_c + \text{FN}_c},
+\]
+and the corresponding F1-score:
+\[
+\text{F1}_c = 2 \cdot \frac{\text{Precision}_c \cdot \text{Recall}_c}{\text{Precision}_c + \text{Recall}_c}.
+\]
+The macro-F1 score is then computed as the unweighted average over all $N=384$ kernel event classes:
+\[
+\text{F1-macro} = \frac{1}{N} \sum_{c=1}^{N} \text{F1}_c.
+\]
+
+We select macro-F1 as the primary metric because kernel execution traces exhibit severe class imbalance. Frequent events (e.g., scheduler activity) dominate execution, while rare events (e.g., error paths or I/O corner cases) are often operationally critical. Macro-averaging prevents models from achieving deceptively high scores by overpredicting frequent events while failing to capture rare but important behaviors.
+
+\paragraph{F1-Score (Weighted).}
+We additionally report weighted F1-score, which averages per-class F1 scores weighted by class support. This metric reflects overall prediction quality under the natural event frequency distribution and complements macro-F1 by indicating how well models perform on common execution paths.
+
+\paragraph{Accuracy.}
+Standard classification accuracy is reported for completeness. Because accuracy can be misleading under heavy class imbalance, we interpret it alongside F1-based metrics rather than in isolation.
+
+\paragraph{Top-$K$ Accuracy.}
+To assess whether models capture plausible alternative behaviors even when the top prediction is incorrect, we report Top-5 and Top-10 accuracy. These metrics are particularly relevant for kernel traces, where multiple valid next events may occur due to scheduling nondeterminism or I/O interleavings.
+
+
+
+
+
+% \subsection{Evaluation Metrics}
+% \label{sec:evaluation-metrics}
+
+% We evaluate synthetic data utility using a downstream next-event prediction task, measuring how well models trained on synthetic traces generalize to real system behavior. All metrics are computed on a held-out real test set to assess whether synthetic data can safely substitute for real traces in downstream learning.
+
+% \textbf{F1-score (Macro).} Our primary metric is macro-averaged F1-score, which assigns equal importance to all kernel event types regardless of frequency. Kernel traces exhibit extreme class imbalance: common scheduler and memory events dominate execution, while rare events (e.g., error paths or exceptional I/O behavior) are operationally significant but infrequent. Macro-F1 prevents models from achieving high scores by overfitting frequent events while ignoring rare behaviors that engineers care about.
+
+% \textbf{Top-K Accuracy.} We additionally report Top-5 accuracy to capture cases where the predicted next event is plausible but not uniquely determined. Kernel execution is inherently nondeterministic due to scheduling and asynchronous I/O; multiple next events may be valid depending on runtime conditions. Top-K accuracy reflects whether the model captures a realistic set of alternatives rather than a single deterministic outcome.
+
+% \paragraph{Training Configurations.}
+% For each generator configuration, we train downstream predictors using: (i) real-only data, (ii) synthetic-only data, and (iii) a 50/50 mixture of real and synthetic data, with and without constraint-based repair. All predictors are evaluated on the same real test set to isolate the contribution of synthetic data quality.
+
+
+
+
+
+% \section{Experimental Setup}
+
+% \label{sec:experiments}
+
+% This section describes the compute environment, datasets, experimental design, and sampling procedure used to evaluate the proposed diffusion-based kernel trace generator. All experiments use a unified training and generation pipeline and differ only in controlled variables such as temporal context length and feature availability.
+
+% \subsection{Compute Environment and Datasets}
+
+% All experiments were executed on the Nibi high-performance computing cluster. Each training and sampling job was allocated a single NVIDIA H100 GPU with 80\,GB of device memory, along with 8 CPU cores and 32\,GB of host memory. Mixed-precision training with \texttt{bf16} and TF32 acceleration was enabled to maximize throughput and maintain numerical stability on H100-class hardware.
+
+% We use windowed NPZ datasets derived from real LTTng kernel traces, as described in Section~\ref{sec:dataset}. Each dataset consists of fixed-length sequences extracted from the \texttt{all-events} tracing configuration and split into training, validation, and test partitions. Unless otherwise stated, experiments are conducted on the \texttt{scimark2} benchmark, which exhibits a diverse mix of compute, scheduling, and memory behavior and is commonly used in systems performance analysis.
+
+% \subsection{Model and Training Configuration}
+% \label{sec:model-config}
+
+% All experiments use the same diffusion-model architecture in order to isolate the effects of data representation and temporal context. The denoising network is a Transformer encoder with $d_{\text{model}}=256$, 4--8 attention heads, and 4--8 layers depending on configuration. The diffusion process uses $T=1000$ timesteps with a linear noise schedule from $\beta_{\text{start}}=10^{-4}$ to $\beta_{\text{end}}=0.02$. Optimization is performed using AdamW with an initial learning rate of $2 \times 10^{-4}$ and a cosine annealing schedule. Aside from the experimental variables described below, all architectural and optimization hyperparameters are held constant across runs.
+
+% Table~\ref{tab:hyperparams} summarizes the model and training hyperparameters shared by all experiments.
+
+% \begin{table}[t]
+% \centering
+% \caption{Model and training hyperparameters (shared across all experiments).}
+% \label{tab:hyperparams}
+% \begin{tabular}{ll}
+% \toprule
+% \textbf{Parameter} & \textbf{Value} \\
+% \midrule
+% Model type & Transformer-based diffusion model \\
+% Embedding dimension ($d_{\text{model}}$) & 256 \\
+% Number of Transformer layers & 4--8 \\
+% Number of attention heads & 4--8 \\
+% Diffusion steps ($T$) & 1000 \\
+% Noise schedule & Linear $\beta$-schedule ($10^{-4}$ to $0.02$) \\
+% Optimizer & AdamW \\
+% Learning rate & $2 \times 10^{-4}$ \\
+% Learning-rate schedule & Cosine decay \\
+% Precision & bf16 (with TF32 enabled) \\
+% \bottomrule
+% \end{tabular}
+% \end{table}
+
+% \subsection{Experimental Design}
+
+% We conduct two complementary experimental studies: a \emph{context-length study} to evaluate scalability with respect to temporal context, and a \emph{feature ablation study} to quantify the contribution of system-level metadata.
+
+% \paragraph{Context-Length Study.}
+% To assess the impact of temporal context on generative fidelity, we train separate models using the full feature set (\texttt{event}, \texttt{dt}, \texttt{cpu}, \texttt{tid}, \texttt{comm}, \texttt{ret}) at three fixed sequence lengths: short (256), medium (1024), and long (4096). Batch sizes are adjusted per configuration to fit GPU memory constraints while maintaining comparable token throughput.
+
+% Table~\ref{tab:context-configs} summarizes the context-length configurations used in this study.
+
+% \begin{table}[t]
+% \centering
+% \caption{Context-length configurations for the scalability study.}
+% \label{tab:context-configs}
+% \footnotesize
+% \setlength{\tabcolsep}{4pt}
+% \begin{tabular}{lrrr}
+% \toprule
+% Configuration & $L$ & Batch & Tokens/batch \\
+% \midrule
+% Short context  & 256  & 64 & 16{,}384 \\
+% Medium context & 1024 & 64 & 65{,}536 \\
+% Long context   & 4096 & 8  & 32{,}768 \\
+% \bottomrule
+% \end{tabular}
+% \end{table}
+
+
+
+
+% This design enables a controlled comparison of short- and long-range dependency modeling while keeping all other architectural and optimization factors constant.
+
+% \paragraph{Feature Ablation Study.}
+% To isolate the effect of feature availability, we conduct a feature ablation study at a fixed sequence length of $L=4096$. We select $L=4096$ for two reasons, (i) the longest context configuration to maximize the model's ability to capture long-range dependencies and complex system behavior patterns (ii) the results from context-length study showed that it outperforms other configuration. This choice also ensures that any observed differences in downstream performance can be attributed to feature availability rather than insufficient temporal context. Since context length is evaluated independently in the context-length study, fixing $L=4096$ prevents confounding the impact of feature removal with changes in temporal context.
+
+% At this fixed context length, we train separate models using progressively richer feature sets derived from the windowed NPZ representation. Table~\ref{tab:ablation-configs} summarizes the three ablation configurations used in our experiments.
+
+% \begin{table}[t]
+% \centering
+% \caption{Feature ablation configurations (fixed sequence length $L=4096$).}
+% \label{tab:ablation-configs}
+% \begin{tabular}{lcccccc}
+% \toprule
+% \textbf{Configuration} & \texttt{event} & \texttt{dt} & \texttt{cpu} & \texttt{tid} & \texttt{comm} & \texttt{ret} \\
+% \midrule
+% Base          & \checkmark & \checkmark & -- & -- & -- & -- \\
+% System-aware  & \checkmark & \checkmark & \checkmark & \checkmark & -- & -- \\
+% Feature-rich  & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark \\
+% \bottomrule
+% \end{tabular}
+% \end{table}
+
+% This ablation isolates the contribution of scheduling context (CPU and thread identifiers) and semantic process metadata (command names and return values) to kernel trace realism and system-level validity.
+
+
+% \subsection{Sampling and Synthetic Data Generation Protocol}
+
+% For each trained model, we generate synthetic kernel traces using the reverse diffusion process. Sampling employs DDIM with 50 steps starting from Gaussian noise. For consistency, models are re-instantiated with the same architectural hyperparameters used during training, and the corresponding checkpoints are loaded. Discrete channels are decoded using argmax over predicted logits, while continuous time-delta values are generated directly from the model output.
+
+% Synthetic traces are generated for all context-length and feature-ablation configurations and stored in the same windowed NPZ format as the real traces. For each configuration, we generate 10,000 synthetic samples to match the scale of real training data. These generated traces are evaluated through downstream task performance to assess how training and sampling configurations affect synthetic data utility.
+
+% \paragraph{Constraint reference for evaluation.}
+% In addition to downstream task evaluation, we assess system validity using a universal constraint knowledge base learned from the complete set of real NPZ shards (train/validation/test across dataset variants) using parallel processing with up to 32 workers. All reported validity scores and repair experiments use the same \texttt{constraints\_universal.json} file to ensure consistent and reproducible assessment across models and configurations.
+
+% \subsection{Downstream Task Evaluation}
+% \label{sec:downstream-eval}
+
+% To evaluate the utility of synthetic data, we employ a next-event prediction task. This task measures whether models trained on synthetic data can accurately predict real system behavior. Figure~\ref{fig:downstream-eval} illustrates the downstream training and evaluation protocol, highlighting the use of independent training sets and a shared real-only test set for fair comparison.
+
+
+% \begin{figure}[t]
+%   \centering
+%   \includegraphics[width=\columnwidth]{figures/2bg-cropped.png}
+%   \caption{Downstream task evaluation protocol.
+%   Independent next-event predictors are trained using different training sets: real-only, synthetic-only (raw), and synthetic-only (constraint-repaired).
+%   All models are evaluated on the same held-out real test set, enabling a controlled comparison of how well synthetic data substitutes for real data in downstream learning.}
+%   \label{fig:downstream-eval}
+% \end{figure}
+
+% \paragraph{Task Definition.} Given a sequence of $L_{\text{pred}}=128$ consecutive kernel events, the model predicts the next event type (384-way classification). This task requires understanding both local event patterns and longer-range dependencies in system execution.
+
+% \paragraph{Predictor Architecture.} The downstream predictor is a Transformer-based classifier with $d_{\text{model}}=256$, 8 attention heads, and 4 layers. For multi-channel inputs, features are embedded separately (event: $d/6$, others: $d/12$ each), concatenated, and fused to $d_{\text{model}}$ via a linear layer. Positional encodings are added, and the final hidden state is passed through a two-layer MLP to produce event logits. For ablation studies, we use \texttt{FlexibleNextEventPredictor}, which supports arbitrary channel subsets.
+
+% \paragraph{Training Configuration.} Predictors are trained for up to 20 epochs using AdamW ($\text{lr}=10^{-4}$) with cross-entropy loss. Training employs sliding windows with stride 64 over sequences, batch size 64, and early stopping with patience 3 based on validation F1-macro score. The best checkpoint is selected for final evaluation.
+
+
+
+%Training progress is monitored using TensorBoard, tracking the total diffusion loss as well as its latent and reconstruction components. Figure~\ref{fig:training-curves} shows representative training curves with and without exponential smoothing, demonstrating stable optimization and consistent convergence across all loss components.
+%
+%To further compare convergence behavior across context-length configurations, Figure~\ref{fig:relative-training} presents the same losses visualized using TensorBoard’s relative-time view. These plots confirm that models trained with longer context lengths converge more slowly, as expected, but exhibit similarly smooth and monotonic loss reduction, indicating that increased temporal context does not introduce optimization instability.
+
+
+\begin{figure}[t]
+ \centering
+ \includegraphics[width=\linewidth]{figures/loss_grid_comparison_compact.png}
+ \caption{Training dynamics of the diffusion model.\textcolor{red}{I removed this from the text}}
+ \label{fig:training-curves}
 \end{figure}
 
 \begin{figure}[t]
-  \centering
-  \includegraphics[width=\linewidth]{figures/relative-training-plot-2.png}
-  \caption{Training loss visualized using TensorBoard’s relative-time view.}
-  \label{fig:relative-training}
+ \centering
+ \includegraphics[width=\linewidth]{figures/relative-training-plot-2.png}
+ \caption{Training loss visualized using TensorBoard’s relative-time view.\textcolor{red}{I removed this fromthe text}}
+ \label{fig:relative-training}
 \end{figure}

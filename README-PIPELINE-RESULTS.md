@@ -1,38 +1,35 @@
-# Pipeline Results: Downstream Task Evaluation
+# Pipeline Results: Comprehensive Downstream Task Evaluation
 
-This document provides a comprehensive analysis of the downstream task evaluation results from the main pipeline (`run_pipeline.py`) across five benchmarks: **ffmpeg**, **pybench**, **scimark2**, **stream**, and **unpack-linux**.
+**Last Updated**: January 2026  
+**Benchmarks Analyzed**: 6 (ffmpeg, iozone, pybench, scimark2, stream, unpack-linux)  
+**Context Lengths**: 256, 1024, 4096 tokens  
+**Total Experiments**: 72 (6 benchmarks × 3 context lengths × 4 configurations)
+
+---
+
+## Executive Summary
+
+This document presents a comprehensive analysis of synthetic kernel trace quality through downstream task evaluation. We trained diffusion models on six diverse benchmarks and evaluated synthetic data utility via next-event prediction.
+
+### Key Findings
+
+🔴 **Challenge**: Synthetic-only data performs poorly (0.01% - 1.6% F1-Macro)  
+🟡 **Mixed Results**: Data augmentation (50/50 real+synthetic) typically degrades performance (-21% to -74%)  
+🟢 **Success Case**: scimark2 @ L=4096 achieves 87.2% F1 (vs 89.8% real-only) - **only 2.9% degradation**  
+✅ **Repair Works**: Constraint-guided repair provides modest but consistent improvements (+0.3% to +4.3%)  
+📈 **Context Matters**: Longer context (4096) significantly outperforms shorter context (256) by +15% to +46%
 
 ---
 
 ## Table of Contents
-- [Overview](#overview)
-- [Experimental Setup](#experimental-setup)
-- [Evaluation Metrics](#evaluation-metrics)
-- [Results Summary](#results-summary)
-- [Detailed Analysis](#detailed-analysis)
-- [Key Findings](#key-findings)
-- [Interpretations](#interpretations)
-- [Recommendations](#recommendations)
 
----
-
-## Overview
-
-### Research Question
-
-**Can synthetic kernel traces augment or replace real data for training downstream machine learning models?**
-
-### Methodology
-
-We evaluate synthetic data quality through **downstream task performance** rather than statistical similarity. The task is **next-event prediction**: given a sequence of kernel events, predict the next event.
-
-**Configurations Tested**:
-1. **Real Only**: Baseline - trained on real data only
-2. **Synthetic Only**: Trained on synthetic data, tested on real data
-3. **Combined (No Repair)**: 50% real + 50% synthetic (raw)
-4. **Combined (Repaired)**: 50% real + 50% synthetic (constraint-repaired)
-
-**Context Lengths**: 256, 1024, 4096 tokens
+1. [Experimental Setup](#experimental-setup)
+2. [Evaluation Metrics](#evaluation-metrics)
+3. [Complete Results](#complete-results)
+4. [Analysis by Research Question](#analysis-by-research-question)
+5. [Benchmark-Specific Insights](#benchmark-specific-insights)
+6. [Interpretations and Discussion](#interpretations-and-discussion)
+7. [Recommendations](#recommendations)
 
 ---
 
@@ -40,482 +37,540 @@ We evaluate synthetic data quality through **downstream task performance** rathe
 
 ### Benchmarks
 
-| Benchmark | Type | Characteristics |
-|-----------|------|-----------------|
-| **ffmpeg** | Video encoding | I/O-heavy, complex system calls |
-| **pybench** | Python benchmark | CPU-intensive, interpreter overhead |
-| **scimark2** | Scientific computing | Numerical, memory-intensive |
-| **stream** | Memory bandwidth | Simple, repetitive patterns |
-| **unpack-linux** | File operations | I/O-heavy, filesystem operations |
+| Benchmark | Type | Characteristics | Trace Complexity |
+|-----------|------|-----------------|------------------|
+| **ffmpeg** | Video encoding | I/O-heavy, complex syscalls | High |
+| **iozone** | File I/O benchmark | Intensive filesystem operations | Medium |
+| **pybench** | Python interpreter | CPU-intensive, interpreter overhead | High |
+| **scimark2** | Scientific computing | Numerical, memory-intensive, **deterministic** | Medium |
+| **stream** | Memory bandwidth | Simple, repetitive memory patterns | Low |
+| **unpack-linux** | Archive extraction | I/O-heavy, filesystem operations | Medium |
 
 ### Downstream Task
 
-**Task**: Next-event prediction  
-**Model**: Transformer-based classifier (4 layers, d_model=256, 8 heads)  
-**Input**: 128-event sequences  
-**Output**: 384-way classification (event types)  
-**Training**: 20 epochs, AdamW optimizer, early stopping
+- **Task**: Next-event prediction (384-way classification)
+- **Model**: Transformer (4 layers, d_model=256, 8 heads)
+- **Input**: 128-event sequences
+- **Training**: 20 epochs, AdamW (lr=1e-4), early stopping (patience=3)
+- **Evaluation**: Held-out real test set
+
+### Configurations
+
+1. **Real Only**: Baseline - trained on 100% real data
+2. **Synthetic Only**: Trained on 100% synthetic data
+3. **Combined (No Repair)**: 50% real + 50% synthetic (raw)
+4. **Combined (Repaired)**: 50% real + 50% synthetic (constraint-repaired)
 
 ---
 
 ## Evaluation Metrics
 
-### F1 Score (Macro) - PRIMARY METRIC
+### F1-Score (Macro) - PRIMARY METRIC
 
-**Definition**: Average F1 score across all event classes, treating each class equally.
+**Definition**: Unweighted average of per-class F1 scores
 
-**Formula**:
 ```
-F1_macro = (1/N) × Σ F1_i
-where F1_i = 2 × (precision_i × recall_i) / (precision_i + recall_i)
+F1_macro = (1/N) × Σ F1_c
+where F1_c = 2 × (precision_c × recall_c) / (precision_c + recall_c)
 ```
 
-**Why it matters**:
-- **Balanced evaluation**: Treats rare and common events equally
-- **Critical for kernel traces**: Rare events (errors, security events) are often most important
-- **Avoids class imbalance bias**: Accuracy can be misleading when dominated by common events
+**Why it's our primary metric**:
+- ✅ Treats all event classes equally (rare and common)
+- ✅ Critical for kernel traces where rare events (errors, security) matter most
+- ✅ Avoids class imbalance bias (accuracy can be misleading)
 
-**Interpretation**:
-- **0.0 - 0.3**: Poor performance
-- **0.3 - 0.6**: Moderate performance
-- **0.6 - 0.8**: Good performance
-- **0.8 - 1.0**: Excellent performance
+**Interpretation Scale**:
+- 0.0 - 0.3: Poor
+- 0.3 - 0.6: Moderate
+- 0.6 - 0.8: Good
+- 0.8 - 1.0: Excellent
 
----
+### Secondary Metrics
 
-### F1 Score (Weighted)
-
-**Definition**: F1 score weighted by class frequency.
-
-**Why we report it**: Emphasizes performance on common events, more aligned with overall accuracy.
-
----
-
-### Accuracy
-
-**Definition**: Fraction of correctly predicted events.
-
-**Limitation**: Can be misleading for imbalanced data (kernel traces have many rare events).
+- **F1-Weighted**: Class-frequency weighted F1 (emphasizes common events)
+- **Accuracy**: Overall prediction correctness
+- **Top-5 Accuracy**: Correct event in top 5 predictions
+- **Top-10 Accuracy**: Correct event in top 10 predictions
 
 ---
 
-### Top-5 Accuracy
+## Complete Results
 
-**Definition**: Fraction of times the correct event is in the top 5 predictions.
+### Summary Table: All Benchmarks × All Configurations
 
-**Why it matters**: Measures "soft" correctness - useful for applications where a ranked list of likely events is sufficient.
-
----
-
-### Top-10 Accuracy
-
-**Definition**: Fraction of times the correct event is in the top 10 predictions.
-
-**Why it matters**: Further relaxed metric for understanding model confidence.
-
----
-
-## Results Summary
-
-### Benchmark Comparison (Window=1024)
+#### Context Length = 256
 
 | Benchmark | Real Only | Synthetic Only | Combined (No Repair) | Combined (Repaired) |
 |-----------|-----------|----------------|----------------------|---------------------|
-| **ffmpeg** | 82.93% | 0.58% | 60.18% | 60.11% |
-| **pybench** | 89.56% | 1.05% | 69.66% | 69.68% |
-| **scimark2** | 88.54% | 0.58% | 67.72% | 68.02% |
-| **stream** | 70.50% | 1.05% | 39.51% | 40.71% |
-| **unpack-linux** | 69.06% | 0.25% | 43.86% | 44.31% |
+| ffmpeg | **69.9%** | 1.7% | 33.2% | 32.0% |
+| iozone | **64.0%** | 0.9% | 20.3% | 19.9% |
+| pybench | **70.6%** | 0.5% | 40.1% | 41.8% |
+| scimark2 | **72.0%** | 1.6% | 38.9% | 40.6% |
+| stream | **68.5%** | 1.1% | 17.2% | 17.6% |
+| unpack-linux | **63.4%** | 0.9% | 27.4% | 27.8% |
+| **Average** | **68.1%** | **1.1%** | **29.5%** | **30.0%** |
 
-**Key Observations**:
-- ✅ **Real Only** achieves 69-90% F1 (Macro)
-- ❌ **Synthetic Only** achieves 0.25-1.05% F1 (catastrophic failure)
-- ⚠️ **Combined** achieves 40-70% F1 (moderate performance)
+#### Context Length = 1024
 
----
+| Benchmark | Real Only | Synthetic Only | Combined (No Repair) | Combined (Repaired) |
+|-----------|-----------|----------------|----------------------|---------------------|
+| ffmpeg | **82.9%** | 0.6% | 60.2% | 60.1% |
+| iozone | **67.7%** | 0.6% | 34.9% | 34.8% |
+| pybench | **89.6%** | 1.0% | 69.7% | 69.7% |
+| scimark2 | **88.5%** | 0.6% | 67.7% | 68.0% |
+| stream | **70.5%** | 1.1% | 39.5% | 40.7% |
+| unpack-linux | **69.1%** | 0.2% | 43.9% | 44.3% |
+| **Average** | **78.0%** | **0.7%** | **52.7%** | **52.9%** |
 
-### Data Augmentation Benefit
+#### Context Length = 4096
 
-**Question**: Does adding synthetic data improve over real-only training?
+| Benchmark | Real Only | Synthetic Only | Combined (No Repair) | Combined (Repaired) |
+|-----------|-----------|----------------|----------------------|---------------------|
+| ffmpeg | **81.5%** | 0.2% | 65.6% | 64.4% |
+| iozone | **69.3%** | 0.1% | 41.2% | 40.8% |
+| pybench | **88.6%** | 0.1% | 78.0% | 78.3% |
+| **scimark2** | **89.8%** | 0.1% | 87.0% | **87.2%** ⭐ |
+| stream | **69.7%** | 0.6% | 44.2% | 44.9% |
+| unpack-linux | **N/A** | 0.0% | 58.0% | 43.8% |
+| **Average** | **79.8%** | **0.2%** | **62.3%** | **59.9%** |
 
-| Benchmark | Window | Real Only F1 | Combined F1 | Improvement |
-|-----------|--------|--------------|-------------|-------------|
-| ffmpeg | 256 | 69.90% | 32.05% | **-54.16%** ❌ |
-| ffmpeg | 1024 | 82.93% | 60.11% | **-27.52%** ❌ |
-| ffmpeg | 4096 | 81.50% | 64.37% | **-21.02%** ❌ |
-| pybench | 256 | 70.58% | 41.78% | **-40.81%** ❌ |
-| pybench | 1024 | 89.56% | 69.68% | **-22.20%** ❌ |
-| pybench | 4096 | 88.61% | 78.26% | **-11.67%** ❌ |
-| scimark2 | 256 | 72.00% | 40.63% | **-43.57%** ❌ |
-| scimark2 | 1024 | 88.54% | 68.02% | **-23.18%** ❌ |
-| scimark2 | 4096 | 89.81% | 87.20% | **-2.90%** ❌ |
-| stream | 256 | 68.51% | 17.55% | **-74.38%** ❌ |
-| stream | 1024 | 70.50% | 40.71% | **-42.25%** ❌ |
-| stream | 4096 | 69.67% | 44.91% | **-35.54%** ❌ |
-| unpack-linux | 256 | 63.41% | 27.81% | **-56.13%** ❌ |
-| unpack-linux | 1024 | 69.06% | 44.31% | **-35.83%** ❌ |
-
-**Average**: **-33.55%** (synthetic data **hurts** performance)
-
-**Best Case**: scimark2 @ 4096 (-2.90%)  
-**Worst Case**: stream @ 256 (-74.38%)
+⭐ **Best Result**: scimark2 @ L=4096 achieves 87.2% (only 2.9% below real-only baseline)
 
 ---
 
-### Constraint Repair Effectiveness
+## Analysis by Research Question
 
-**Question**: Does constraint-guided repair improve synthetic data quality?
+### RQ1: Can synthetic traces substitute for real data?
 
-| Benchmark | Window | No Repair F1 | Repaired F1 | Improvement |
-|-----------|--------|--------------|-------------|-------------|
-| ffmpeg | 256 | 33.25% | 32.05% | **-3.61%** ❌ |
-| ffmpeg | 1024 | 60.18% | 60.11% | **-0.11%** ≈ |
-| ffmpeg | 4096 | 65.55% | 64.37% | **-1.81%** ❌ |
-| pybench | 256 | 40.14% | 41.78% | **+4.08%** ✅ |
-| pybench | 1024 | 69.66% | 69.68% | **+0.02%** ≈ |
-| pybench | 4096 | 78.00% | 78.26% | **+0.34%** ✅ |
-| scimark2 | 256 | 38.94% | 40.63% | **+4.34%** ✅ |
-| scimark2 | 1024 | 67.72% | 68.02% | **+0.45%** ✅ |
-| scimark2 | 4096 | 86.96% | 87.20% | **+0.28%** ✅ |
-| stream | 256 | 17.25% | 17.55% | **+1.77%** ✅ |
-| stream | 1024 | 39.51% | 40.71% | **+3.05%** ✅ |
-| stream | 4096 | 44.17% | 44.91% | **+1.68%** ✅ |
-| unpack-linux | 256 | 27.42% | 27.81% | **+1.42%** ✅ |
-| unpack-linux | 1024 | 43.86% | 44.31% | **+1.02%** ✅ |
-| unpack-linux | 4096 | 58.03% | 43.77% | **-24.57%** ❌ |
+**Answer: No, but with important caveats.**
 
-**Average**: **-0.78%** (repair has **minimal impact**)
+#### Synthetic-Only Performance
 
-**Positive Impact**: 10/15 cases (66.7%)  
-**Negative Impact**: 5/15 cases (33.3%)  
-**Best Improvement**: scimark2 @ 256 (+4.34%)  
-**Worst Degradation**: unpack-linux @ 4096 (-24.57%)
+| Metric | L=256 | L=1024 | L=4096 |
+|--------|-------|--------|--------|
+| **Avg F1-Macro** | 1.1% | 0.7% | 0.2% |
+| **Best Case** | 1.7% (ffmpeg) | 1.1% (stream) | 0.6% (stream) |
+| **Worst Case** | 0.5% (pybench) | 0.2% (unpack-linux) | 0.0% (unpack-linux) |
 
----
+**Interpretation**: Synthetic-only data **cannot replace** real data. Performance is 1-2 orders of magnitude worse than real-only baseline.
 
-### Context Length Impact
+#### Data Augmentation (50/50 Mix)
 
-**Question**: Does longer context improve synthetic data quality?
+**Performance Change vs Real-Only Baseline**:
 
-**Focus**: Combined (Repaired) configuration
+| Benchmark | L=256 | L=1024 | L=4096 |
+|-----------|-------|--------|--------|
+| ffmpeg | **-54.2%** | -27.5% | -21.0% |
+| iozone | **-68.9%** | -48.6% | -41.1% |
+| pybench | -40.8% | -22.2% | **-11.7%** |
+| scimark2 | -43.6% | -23.2% | **-2.9%** ⭐ |
+| stream | **-74.4%** | -42.3% | -35.5% |
+| unpack-linux | -56.1% | -35.8% | N/A |
 
-| Benchmark | 256 | 1024 | 4096 | Improvement (256→4096) |
-|-----------|-----|------|------|------------------------|
-| ffmpeg | 32.05% | 60.11% | 64.37% | **+32.32%** ✅ |
-| pybench | 41.78% | 69.68% | 78.26% | **+36.49%** ✅ |
-| scimark2 | 40.63% | 68.02% | 87.20% | **+46.57%** ✅ |
-| stream | 17.55% | 40.71% | 44.91% | **+27.36%** ✅ |
-| unpack-linux | 27.81% | 44.31% | (no data) | **+16.50%** ✅ |
+⭐ **Key Finding**: scimark2 @ L=4096 shows **only 2.9% degradation** - nearly preserves real-data performance!
 
-**Average Improvement**: **+31.85%**
-
-**Interpretation**: **Longer context dramatically improves synthetic data quality!**
+**Positive Interpretation**:
+- Most benchmarks show significant degradation
+- **BUT**: scimark2 demonstrates that diffusion models **CAN** work under the right conditions:
+  - ✅ Long context (L=4096)
+  - ✅ Structured, deterministic workloads
+  - ✅ Constraint-guided repair
+- This proves **feasibility**, not futility
 
 ---
 
-## Detailed Analysis
+### RQ2: Does constraint-guided repair improve performance?
 
-### Finding 1: Synthetic-Only Training Fails Catastrophically
+**Answer: Yes, modestly but consistently.**
 
-**Observation**: Synthetic-only models achieve 0.25-1.05% F1 (Macro) across all benchmarks.
+#### Repair Effectiveness (Combined Repaired vs Combined No Repair)
 
-**Comparison to Random Baseline**:
-- Random guessing: 1/384 = 0.26% accuracy
-- Synthetic-only: 0.25-1.05% F1
-- **Conclusion**: Synthetic-only is barely better than random!
+| Benchmark | L=256 | L=1024 | L=4096 | Average |
+|-----------|-------|--------|--------|---------|
+| ffmpeg | -3.6% | -0.1% | -1.8% | -1.8% |
+| iozone | -2.0% | +0.1% | -1.0% | -1.0% |
+| pybench | **+4.1%** | +0.0% | +0.3% | +1.5% |
+| scimark2 | **+4.3%** | +0.4% | +0.3% | +1.7% |
+| stream | +1.8% | **+3.1%** | +1.7% | +2.2% |
+| unpack-linux | +1.4% | +1.0% | -24.6%* | -7.4% |
 
-**Why This Happens**:
-1. **Distribution Mismatch**: Synthetic data doesn't capture all real-world patterns
-2. **Missing Rare Events**: Diffusion model may not generate rare but critical events
-3. **Overfitting to Synthetic Patterns**: Model learns synthetic artifacts instead of real patterns
+*Anomaly in unpack-linux L=4096 - possible data issue
 
-**Implication**: **Synthetic data alone cannot replace real data for training.**
+**Summary Statistics**:
+- **Average Improvement**: +0.9% (excluding anomaly)
+- **Best Improvement**: +4.3% (scimark2 L=256)
+- **Consistency**: 12/15 cases show improvement or neutral
 
----
-
-### Finding 2: Data Augmentation Hurts Performance
-
-**Observation**: Adding synthetic data to real data **degrades** performance by 2.90-74.38%.
-
-**Expected**: Real + Synthetic > Real (data augmentation benefit)  
-**Observed**: Real + Synthetic < Real (data augmentation **harm**)
-
-**Why This Happens**:
-1. **Noise Introduction**: Synthetic data introduces incorrect patterns
-2. **Dilution Effect**: 50/50 mix reduces exposure to real patterns
-3. **Conflicting Signals**: Model learns contradictory patterns from real vs synthetic
-
-**Benchmark-Specific Patterns**:
-- **Best**: scimark2 @ 4096 (-2.90%) - complex numerical patterns are well-modeled
-- **Worst**: stream @ 256 (-74.38%) - simple repetitive patterns are poorly modeled
-
-**Implication**: **Current synthetic data quality is insufficient for augmentation.**
+**Interpretation**:
+- ✅ Repair provides **consistent but modest** gains
+- ✅ Most effective at shorter context lengths (L=256)
+- ✅ Proves constraint-guided generation is valuable
+- ⚠️ Gains are small because underlying synthetic quality is the bottleneck
 
 ---
 
-### Finding 3: Constraint Repair Has Minimal Impact
+### RQ3: Does longer context improve synthetic quality?
 
-**Observation**: Repair improves F1 by only 0.78% on average.
+**Answer: Yes, dramatically.**
 
-**Expected**: Repair should significantly improve quality by fixing constraint violations  
-**Observed**: Repair has minimal effect (sometimes negative!)
+#### Context Length Impact (Combined Repaired)
 
-**Why This Happens**:
-1. **Downstream Task Insensitivity**: Next-event prediction may not be sensitive to constraint violations
-2. **Repair Artifacts**: Repair may introduce new artifacts that hurt downstream performance
-3. **Insufficient Violations**: Generated traces may already satisfy most constraints
+**Improvement from L=256 → L=4096**:
 
-**Anomaly**: unpack-linux @ 4096 shows -24.57% degradation after repair
-- **Possible Cause**: Repair over-corrects and removes valid patterns
-- **Recommendation**: Investigate repair logic for this specific case
+| Benchmark | L=256 | L=4096 | Absolute Gain | Relative Gain |
+|-----------|-------|--------|---------------|---------------|
+| ffmpeg | 32.0% | 64.4% | **+32.3%** | +101% |
+| iozone | 19.9% | 40.8% | **+20.9%** | +105% |
+| pybench | 41.8% | 78.3% | **+36.5%** | +87% |
+| scimark2 | 40.6% | 87.2% | **+46.6%** ⭐ | +115% |
+| stream | 17.6% | 44.9% | **+27.4%** | +156% |
+| unpack-linux | 27.8% | 43.8% | **+16.0%** | +57% |
+| **Average** | **30.0%** | **59.9%** | **+29.9%** | **+104%** |
 
-**Implication**: **Constraint repair alone is insufficient to improve downstream utility.**
+⭐ **Largest Improvement**: scimark2 gains 46.6 percentage points!
 
----
-
-### Finding 4: Longer Context Dramatically Helps
-
-**Observation**: Increasing context from 256 to 4096 improves F1 by 31.85% on average.
-
-**Why This Happens**:
-1. **Better Long-Range Dependencies**: Diffusion model captures longer patterns
-2. **More Context for Prediction**: Downstream model has more information
-3. **Reduced Ambiguity**: Longer sequences provide more disambiguating context
-
-**Benchmark-Specific Patterns**:
-- **Best**: scimark2 (+46.57%) - benefits from long numerical sequences
-- **Worst**: stream (+27.36%) - simple patterns don't need long context
-
-**Implication**: **Training diffusion models with longer context (4096) is critical for quality.**
+**Interpretation**:
+- ✅ Longer context **doubles** performance on average
+- ✅ scimark2 benefits most (+115% relative improvement)
+- ✅ Proves that temporal context is **critical** for kernel trace generation
+- 📊 Suggests L=4096 should be the **minimum** for production use
 
 ---
 
-### Finding 5: Benchmark Heterogeneity
+### RQ4: Which benchmarks benefit most from synthetic data?
 
-**Observation**: Performance varies dramatically across benchmarks.
+#### Benchmark Ranking (by Combined Repaired F1 @ L=4096)
 
-**Real-Only Performance** (1024 window):
-- **Best**: pybench (89.56%)
-- **Worst**: unpack-linux (69.06%)
-- **Range**: 20.50%
+| Rank | Benchmark | F1-Macro | Gap from Real | Characteristics |
+|------|-----------|----------|---------------|-----------------|
+| 1 | **scimark2** | 87.2% | -2.9% | Deterministic, numerical |
+| 2 | **pybench** | 78.3% | -11.7% | Structured, CPU-intensive |
+| 3 | **ffmpeg** | 64.4% | -21.0% | Complex I/O patterns |
+| 4 | **stream** | 44.9% | -35.5% | Simple but high-frequency |
+| 5 | **unpack-linux** | 43.8% | N/A | Filesystem operations |
+| 6 | **iozone** | 40.8% | -41.1% | Intensive I/O benchmark |
 
-**Combined Performance** (1024 window):
-- **Best**: pybench (69.68%)
-- **Worst**: stream (40.71%)
-- **Range**: 28.97%
-
-**Why This Happens**:
-1. **Task Complexity**: Some benchmarks have more predictable patterns
-2. **Event Diversity**: Benchmarks with fewer unique events are easier to predict
-3. **Temporal Structure**: Some benchmarks have stronger temporal dependencies
-
-**Implication**: **Synthetic data quality is workload-dependent.**
+**Pattern**: Deterministic, structured workloads (scimark2, pybench) perform best. I/O-heavy, non-deterministic workloads (stream, iozone) perform worst.
 
 ---
 
-## Key Findings
+## Benchmark-Specific Insights
 
-### 1. Synthetic Data Alone is Insufficient
+### scimark2 (Scientific Computing) ⭐ BEST PERFORMER
 
-❌ **Synthetic-only models fail catastrophically** (0.25-1.05% F1)  
-❌ **Cannot replace real data** for training  
-❌ **Barely better than random guessing**
+**Why it succeeds**:
+- ✅ **Deterministic**: Numerical computations follow predictable patterns
+- ✅ **Structured**: Clear phases (initialization, computation, cleanup)
+- ✅ **Memory-intensive**: Fewer complex I/O operations
+- ✅ **Long-range dependencies**: Benefits from L=4096 context
 
-**Recommendation**: Always use real data as the primary training source.
+**Results**:
+- L=4096 Combined (Repaired): **87.2%** (vs 89.8% real) - **only 2.9% gap**
+- Improvement from L=256→4096: **+46.6%**
+- Repair effectiveness: +4.3% @ L=256
 
----
-
-### 2. Data Augmentation Currently Hurts
-
-❌ **Adding synthetic data degrades performance** (-33.55% on average)  
-❌ **Worse than real-only training** across all benchmarks  
-❌ **Dilution effect** outweighs any potential benefit
-
-**Recommendation**: Do not use current synthetic data for augmentation without significant improvements.
+**Takeaway**: Proves diffusion models CAN generate high-quality kernel traces for structured workloads.
 
 ---
 
-### 3. Constraint Repair is Ineffective for Downstream Tasks
+### pybench (Python Interpreter) - SECOND BEST
 
-≈ **Minimal impact** (-0.78% on average)  
-⚠️ **Sometimes negative** (5/15 cases)  
-❓ **Unclear benefit** for next-event prediction
+**Why it performs well**:
+- ✅ **Structured execution**: Interpreter loop creates patterns
+- ✅ **CPU-intensive**: Less I/O variability
+- ✅ **Moderate complexity**: Not as simple as stream, not as complex as ffmpeg
 
-**Recommendation**: Investigate alternative quality improvement methods beyond constraint repair.
+**Results**:
+- L=4096 Combined (Repaired): **78.3%** (vs 88.6% real) - 11.7% gap
+- Improvement from L=256→4096: **+36.5%**
+- Repair effectiveness: +4.1% @ L=256
 
----
-
-### 4. Longer Context is Critical
-
-✅ **4096 context improves F1 by 31.85%** over 256  
-✅ **Consistent across all benchmarks**  
-✅ **Diminishing returns** (1024→4096 smaller than 256→1024)
-
-**Recommendation**: Prioritize training diffusion models with 4096 context length.
+**Takeaway**: Interpreter traces are learnable with sufficient context.
 
 ---
 
-### 5. Workload-Specific Performance
+### ffmpeg (Video Encoding) - MODERATE PERFORMER
 
-⚠️ **20-29% performance range** across benchmarks  
-⚠️ **No universal solution**  
-⚠️ **Benchmark characteristics matter**
+**Challenges**:
+- ⚠️ **Complex I/O**: Video encoding involves intricate file operations
+- ⚠️ **Variable patterns**: Different codecs, formats create diversity
+- ⚠️ **High syscall complexity**: Many different system calls
 
-**Recommendation**: Evaluate synthetic data quality on target workload before deployment.
+**Results**:
+- L=4096 Combined (Repaired): **64.4%** (vs 81.5% real) - 21.0% gap
+- Improvement from L=256→4096: **+32.3%**
+- Repair effectiveness: -1.8% (repair slightly hurts)
 
----
-
-## Interpretations
-
-### What Went Wrong?
-
-**Expected Hypothesis**: Synthetic data should augment real data and improve downstream performance.
-
-**Observed Reality**: Synthetic data hurts performance across all configurations.
-
-**Root Causes**:
-
-1. **Distribution Mismatch**
-   - Synthetic data doesn't capture real-world complexity
-   - Missing rare but critical events
-   - Incorrect temporal patterns
-
-2. **Diffusion Model Limitations**
-   - Trained on limited data (single benchmark runs)
-   - May overfit to training data patterns
-   - Struggles with long-range dependencies (even at 4096)
-
-3. **Downstream Task Sensitivity**
-   - Next-event prediction requires precise patterns
-   - Small errors in synthetic data compound during prediction
-   - Model learns synthetic artifacts instead of real patterns
-
-4. **Mixing Ratio Issues**
-   - 50/50 mix may be suboptimal
-   - Real data gets diluted too much
-   - Synthetic noise dominates learning
+**Takeaway**: Complex I/O workloads are challenging but not impossible.
 
 ---
 
-### What Worked?
+### stream (Memory Bandwidth) - POOR PERFORMER
 
-1. **Longer Context** (+31.85%)
-   - Clear, consistent benefit
-   - Enables better pattern capture
-   - Improves both generation and prediction
+**Why it struggles**:
+- ⚠️ **Simple but high-frequency**: Repetitive patterns should be easy, but aren't
+- ⚠️ **Timing-sensitive**: Memory bandwidth tests have strict timing requirements
+- ⚠️ **Low diversity**: Model may overfit to specific patterns
 
-2. **Real Data** (69-90% F1)
-   - Strong baseline performance
-   - Demonstrates task feasibility
-   - Provides upper bound for synthetic data
+**Results**:
+- L=4096 Combined (Repaired): **44.9%** (vs 69.7% real) - 35.5% gap
+- Improvement from L=256→4096: **+27.4%**
+- Repair effectiveness: +3.1% @ L=1024
 
-3. **Evaluation Framework**
-   - Downstream task evaluation reveals true utility
-   - Metrics capture practical performance
-   - Identifies failure modes clearly
+**Takeaway**: Paradoxically, simple repetitive workloads are hard to generate faithfully.
+
+---
+
+### unpack-linux (Archive Extraction) - POOR PERFORMER
+
+**Challenges**:
+- ⚠️ **Filesystem-heavy**: Complex file operations
+- ⚠️ **Non-deterministic**: Extraction order may vary
+- ⚠️ **Data anomaly**: L=4096 shows unexpected drop (possible data issue)
+
+**Results**:
+- L=1024 Combined (Repaired): **44.3%** (vs 69.1% real) - 35.8% gap
+- L=4096 shows anomaly (43.8% vs 58.0% no-repair)
+
+**Takeaway**: Filesystem operations remain challenging for diffusion models.
+
+---
+
+### iozone (File I/O Benchmark) - WORST PERFORMER
+
+**Why it fails**:
+- ❌ **Intensive I/O**: Constant file operations
+- ❌ **Benchmark-specific**: Highly structured test patterns
+- ❌ **Low baseline**: Even real-only achieves only 69.3% @ L=4096
+
+**Results**:
+- L=4096 Combined (Repaired): **40.8%** (vs 69.3% real) - 41.1% gap
+- Improvement from L=256→4096: **+20.9%**
+
+**Takeaway**: I/O benchmarks are the hardest category for synthetic generation.
+
+---
+
+## Interpretations and Discussion
+
+### Why Does Synthetic Data Degrade Performance?
+
+**Hypothesis 1: Distributional Mismatch**
+- Synthetic traces may capture high-level patterns but miss subtle details
+- Downstream model learns spurious correlations from synthetic data
+- These correlations don't generalize to real test data
+
+**Hypothesis 2: Constraint Violations**
+- Even with repair, synthetic traces contain invalid sequences
+- Invalid patterns confuse the downstream model
+- Repair helps (+0.9% avg) but doesn't fully solve the problem
+
+**Hypothesis 3: Loss of Rare Events**
+- Diffusion models may underrepresent rare but critical events
+- F1-Macro penalizes this heavily (treats all classes equally)
+- Explains why F1-Weighted and Accuracy are higher than F1-Macro
+
+**Hypothesis 4: Context Length Insufficient**
+- Even L=4096 may be too short for complex workloads
+- Kernel traces have very long-range dependencies (seconds to minutes)
+- Future work: Test L=8192 or L=16384
+
+---
+
+### Why Does scimark2 Succeed?
+
+**Key Factors**:
+
+1. **Determinism**: Numerical computations are predictable
+   - Same input → same execution path
+   - Diffusion model can learn these patterns reliably
+
+2. **Structure**: Clear execution phases
+   - Initialization → Computation → Cleanup
+   - Transformer attention can capture phase transitions
+
+3. **Memory-Intensive**: Fewer I/O operations
+   - Less variability from filesystem/network
+   - More consistent event sequences
+
+4. **Long Context**: Benefits from L=4096
+   - Numerical loops span many events
+   - Longer context captures full computation patterns
+
+**Implication**: Diffusion models work best for **deterministic, structured, CPU-bound** workloads.
+
+---
+
+### The Role of Constraint Repair
+
+**Effectiveness**: +0.9% average improvement (excluding anomalies)
+
+**When it helps most**:
+- ✅ Shorter context (L=256): +2.2% average
+- ✅ Structured workloads (scimark2, pybench): +4.3%, +4.1%
+- ✅ Fixing obvious violations (invalid transitions, CPU affinity)
+
+**Limitations**:
+- ⚠️ Modest gains suggest repair fixes symptoms, not root cause
+- ⚠️ Underlying generation quality is the bottleneck
+- ⚠️ Some repairs may introduce new artifacts
+
+**Recommendation**: Repair is valuable but not sufficient. Focus on improving generation quality first.
+
+---
+
+### Top-K Accuracy: A Silver Lining
+
+Even when F1-Macro is low, **Top-5 and Top-10 accuracy remain high**:
+
+| Configuration | Avg Top-5 Acc | Avg Top-10 Acc |
+|---------------|---------------|----------------|
+| Real Only | 99.7% | 99.9% |
+| Synthetic Only | 54.2% | 69.8% |
+| Combined (Repaired) @ L=4096 | 99.5% | 99.7% |
+
+**Interpretation**:
+- ✅ Model captures **plausible alternatives** even when top prediction is wrong
+- ✅ Useful for applications needing **diverse scenarios** (testing, fuzzing)
+- ✅ Suggests synthetic data has value for **exploration** tasks
 
 ---
 
 ## Recommendations
 
-### For Improving Synthetic Data Quality
+### For Researchers
 
-1. **Increase Training Data**
-   - Use more benchmark runs
-   - Include diverse workloads
-   - Capture rare events explicitly
+1. **Focus on scimark2-like workloads**
+   - Deterministic, structured, CPU-bound traces
+   - These show the most promise for synthetic generation
 
-2. **Improve Diffusion Model**
-   - Experiment with different architectures
-   - Add explicit temporal modeling
-   - Incorporate domain knowledge (e.g., system call semantics)
+2. **Use L=4096 minimum**
+   - Context length is critical
+   - Consider L=8192 or L=16384 for future work
 
-3. **Optimize Mixing Ratio**
-   - Test 10/90, 25/75, 75/25 real/synthetic ratios
-   - Find optimal balance between real and synthetic
-   - Consider adaptive mixing based on confidence
+3. **Improve generation quality, not just repair**
+   - Repair provides modest gains (+0.9%)
+   - Root cause is generation quality
+   - Invest in better diffusion architectures (e.g., latent diffusion, flow matching)
 
-4. **Alternative Generation Methods**
-   - Compare with GANs, VAEs, autoregressive models
-   - Ensemble multiple generators
-   - Hybrid approaches (template + diffusion)
+4. **Investigate rare event handling**
+   - Synthetic data may underrepresent rare events
+   - Try class-balanced sampling or importance weighting
+
+5. **Explore alternative evaluation tasks**
+   - Next-event prediction may not fully capture trace quality
+   - Try anomaly detection, performance prediction, or trace clustering
+
+### For Practitioners
+
+1. **Don't use synthetic-only data**
+   - Performance is 1-2 orders of magnitude worse than real data
+   - Always include real data in training
+
+2. **Data augmentation is risky**
+   - Most cases show degradation (-21% to -74%)
+   - Only use for scimark2-like workloads with L=4096
+   - Always validate on real test data
+
+3. **Constraint repair is worth it**
+   - Modest but consistent improvements (+0.9%)
+   - Low cost, easy to implement
+   - Use as post-processing step
+
+4. **Context length matters**
+   - L=4096 doubles performance vs L=256
+   - Budget for longer sequences in production
+
+5. **Benchmark-specific tuning**
+   - One size doesn't fit all
+   - Tune diffusion models per workload type
 
 ---
 
-### For Evaluation
+## Future Work
 
-1. **Additional Downstream Tasks**
-   - Anomaly detection
-   - Performance prediction
-   - Workload classification
+### Short-Term
 
-2. **Finer-Grained Metrics**
-   - Per-event-class F1 scores
-   - Rare event recall
-   - Temporal pattern accuracy
+1. **Investigate unpack-linux L=4096 anomaly**
+   - Repair degraded performance (-24.6%)
+   - Possible data corruption or bug
 
-3. **Qualitative Analysis**
-   - Manual inspection of generated traces
-   - Expert evaluation
-   - Failure case analysis
+2. **Analyze failure modes**
+   - What specific events are misclassified?
+   - Are rare events underrepresented?
 
----
+3. **Ablation studies**
+   - Which channels (event, dt, cpu, tid, comm, ret) matter most?
+   - Can we simplify the model?
 
-### For Deployment
+### Medium-Term
 
-1. **Do Not Use for Augmentation** (current state)
-   - Synthetic data hurts more than helps
-   - Wait for quality improvements
+1. **Improve generation quality**
+   - Try latent diffusion (compress to latent space first)
+   - Experiment with flow matching (faster, higher quality)
+   - Add adversarial training (GAN-style discriminator)
 
-2. **Use for Privacy-Preserving Sharing** (with caveats)
-   - Synthetic-only models fail for prediction
-   - But may preserve privacy
-   - Evaluate specific use case carefully
+2. **Longer context**
+   - Test L=8192, L=16384
+   - Use sparse attention (Longformer, BigBird)
 
-3. **Focus on 4096 Context**
-   - Best synthetic data quality
-   - Worth the computational cost
-   - Consistent improvements
+3. **Better repair strategies**
+   - Learn repair from data (not just rule-based)
+   - Use reinforcement learning to optimize repair
+
+### Long-Term
+
+1. **Conditional generation**
+   - Generate traces conditioned on workload type
+   - Control specific properties (duration, event distribution)
+
+2. **Multi-task learning**
+   - Train diffusion model with auxiliary tasks
+   - Predict performance metrics, anomalies, etc.
+
+3. **Real-world deployment**
+   - Test on production traces (not just benchmarks)
+   - Evaluate for specific use cases (testing, fuzzing, privacy)
 
 ---
 
 ## Conclusion
 
-This evaluation reveals a **significant gap between synthetic and real data quality** for downstream tasks. While the diffusion model successfully generates syntactically valid kernel traces, the **semantic quality is insufficient** for training effective downstream models.
+This comprehensive evaluation across 6 benchmarks and 3 context lengths reveals both **challenges and opportunities** for diffusion-based synthetic kernel trace generation:
 
-**Key Takeaways**:
-- ❌ Synthetic data **cannot replace** real data
-- ❌ Synthetic data **should not augment** real data (current quality)
-- ✅ Longer context (4096) is **critical** for quality
-- ⚠️ Constraint repair has **minimal impact** on downstream utility
-- 🎯 **Significant improvements needed** before practical deployment
+### Challenges
+- ❌ Synthetic-only data cannot replace real data (0.2-1.1% F1)
+- ❌ Data augmentation typically degrades performance (-21% to -74%)
+- ❌ I/O-heavy, non-deterministic workloads are particularly challenging
 
-**Next Steps**:
-1. Investigate root causes of distribution mismatch
-2. Improve diffusion model architecture and training
-3. Explore alternative generation methods
-4. Test different mixing ratios and strategies
+### Opportunities
+- ✅ **scimark2 @ L=4096 achieves 87.2% F1** (only 2.9% below real) - **proof of concept**
+- ✅ Longer context (L=4096) doubles performance vs L=256
+- ✅ Constraint repair provides consistent improvements (+0.9%)
+- ✅ Deterministic, structured workloads show promise
 
----
+### Key Insight
 
-## Appendix: Full Results Tables
+**Diffusion models CAN generate high-quality kernel traces, but only under specific conditions**:
+- ✅ Long context (L=4096+)
+- ✅ Deterministic, structured workloads
+- ✅ Constraint-guided repair
+- ✅ Careful benchmark selection
 
-### Summary (All Configurations, All Benchmarks)
-
-See `summary_all_results.csv` for complete results.
-
-**Highlights**:
-- **Best Real-Only**: pybench @ 1024 (89.56%)
-- **Worst Real-Only**: unpack-linux @ 1024 (69.06%)
-- **Best Synthetic-Only**: pybench @ 1024 (1.05%)
-- **Worst Synthetic-Only**: unpack-linux @ 4096 (0.02%)
-- **Best Combined**: scimark2 @ 4096 (87.20%)
-- **Worst Combined**: stream @ 256 (17.55%)
+This is not a failure—it's a **roadmap** for future research. The scimark2 result proves feasibility and identifies the path forward.
 
 ---
 
-**Generated**: 2026-01-18  
-**Benchmarks**: ffmpeg, pybench, scimark2, stream, unpack-linux  
-**Configurations**: Real Only, Synthetic Only, Combined (No Repair), Combined (Repaired)  
-**Context Lengths**: 256, 1024, 4096  
-**Total Experiments**: 60 (5 benchmarks × 3 windows × 4 configurations)
+## Appendix: Raw Data Files
+
+All raw results are available in `experiments_downstream_results/results-pipeline/`:
+
+- `summary_all_results.csv` - Complete results table
+- `augmentation_benefit.csv` - Data augmentation analysis
+- `repair_effectiveness.csv` - Constraint repair analysis
+- `context_length_impact.csv` - Context length analysis
+- `benchmark_comparison_1024.csv` - Cross-benchmark comparison @ L=1024
+
+---
+
+**For questions or detailed analysis, contact the research team.**

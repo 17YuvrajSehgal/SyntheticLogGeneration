@@ -1,0 +1,26 @@
+\section{Related Work}
+\label{sec:related-works}
+
+Our work builds on three research areas: synthetic trace generation, constraint-guided generation, and diffusion models for structured sequences.
+
+\subsection{Synthetic Trace Generation}
+
+Early trace synthesis approaches relied on pattern-matching and state-based abstraction. Ecole et al.~\cite{Ecole4861} proposed stateful event generation from kernel traces, converting platform-specific events into semantic abstractions through pattern matching and system state modeling. More recently, domain-specific methods have emerged: SAGA~\cite{Huang2024SAGASA} generates labeled audit logs for cybersecurity using attack pattern templates from the MITRE ATT\&CK framework, demonstrating effectiveness on intrusion detection and campaign attribution tasks. TraceLLM~\cite{kim2025largelanguagemodelsrealistic} applies large language models to microservice call graph generation through recursive layer-by-layer generation with instruction tuning, achieving performance within 1.5\% of real-data baselines when trained on synthetic data alone.
+
+\subsection{Constraint-Guided Generation}
+
+Enforcing structural and semantic constraints remains a key challenge. Tracyn~\cite{huang2025projecttracyngenerativeartificial} reformulates PCIe trace generation as image generation and applies post-hoc constraint repair through dispersion-based calibration, achieving 1000× improvement in task-specific metrics. This two-stage approach—unconstrained generation followed by targeted repair—demonstrates that post-hoc correction can be more effective than constrained generation. Our constraint-guided repair mechanism follows this paradigm but learns constraints directly from real traces rather than relying on domain-specific rules.
+
+\subsection{Diffusion Models for Structured Sequences}
+
+Recent work has explored diffusion models for trace reconstruction and generation. Li et al.~\cite{11029922} apply diffusion models (DiffWave, SSSDS4, SSSDSA, CSDIS4) to reconstruct missing events in kernel traces caused by buffer overflow, treating reconstruction as data imputation. Their SSSDS4 model achieves 81.62\% accuracy by leveraging both preceding and following context, significantly outperforming LSTM baselines (29.61\% accuracy). This work establishes diffusion models as viable alternatives to traditional trace abstraction techniques.
+
+Our work extends these foundations in three ways: (1) we generate complete multi-attribute traces rather than reconstructing missing segments, (2) we jointly model six correlated trace attributes in a unified latent space, and (3) we evaluate synthetic data quality through downstream task performance rather than reconstruction accuracy.
+
+\subsection{Limitations of Prior Approaches}
+
+Toemmel et al.~\cite{toemmel2021catchganusingartificial} demonstrate that GANs (SeqGAN, MaliGAN, CoT) fail for log generation due to inability to maintain semantic properties. Despite achieving syntactic correctness, evaluated GANs violated chronology (non-monotonic timestamps) and event coherence (invalid state transitions). This negative result motivated exploration of alternative generative paradigms—including diffusion models—better suited to structured sequence modeling with hard constraints.
+
+\subsection{Positioning of Our Work}
+
+Unlike prior work focusing on specific domains (cybersecurity logs, microservice traces, PCIe packets), we target general-purpose kernel execution traces with diverse workload characteristics. Our multi-channel diffusion model jointly generates correlated attributes while our constraint-guided repair ensures 100\% structural validity. We provide the first comprehensive evaluation of synthetic kernel trace quality across workload types, context lengths, and model configurations, with actionable guidance for practitioners on when synthetic augmentation is viable.

@@ -1,19 +1,15 @@
 % ---------- Abstract ----------
 \begin{abstract}
-Machine learning models for system diagnostics, anomaly detection, performance prediction, and root cause analysis, require large volumes of labeled execution traces for training.
-However, collecting production kernel traces is expensive: it imposes runtime overhead, raises privacy concerns, and captures only the narrow slice of behaviors present during collection windows.
-This data scarcity bottleneck limits the adoption of ML-based observability tools in production environments.
-We present \textsc{SynthTrace}, a diffusion-based framework for generating synthetic kernel execution traces that preserve the statistical and structural properties of real system behavior.
-\textsc{SynthTrace} models traces as multi-channel sequences (event types, timestamps, CPU affinity, thread identifiers, and process metadata) and learns to generate coherent sequences through a Transformer-based denoising diffusion process.
-To ensure generated traces respect system invariants, we introduce a constraint learning and post-hoc repair mechanism that enforces valid event transitions, temporal bounds, and attribute consistency.
-We evaluate \textsc{SynthTrace} on six diverse benchmark workloads spanning CPU-intensive, memory-intensive, and I/O-heavy applications.
-In downstream next-event prediction tasks, models trained on repaired synthetic traces achieve 91\% of the F1-score obtained with real data, and mixing synthetic with real traces improves baseline performance by up to 3\%.
-Constraint-guided repair consistently improves raw synthetic data quality by 13--18\% across context lengths.
-\textsc{SynthTrace} enables practitioners to augment limited real traces with high-fidelity synthetic data, reducing the cost barrier for deploying ML-based system diagnostics.
+Machine learning models for system diagnostics require large volumes of kernel execution traces for training, yet collecting production traces is expensive due to runtime overhead, storage costs, and privacy concerns.
+We present \textsc{SynthTrace}, a diffusion-based framework for generating synthetic kernel traces that can augment limited real data for downstream ML tasks.
+\textsc{SynthTrace} models traces as multi-channel sequences (event types, timestamps, CPU affinity, thread identifiers, process metadata) using a Transformer-based denoising diffusion process, coupled with constraint-guided repair to enforce system invariants.
 
-% Machine learning models for system behavior analysis require large volumes of training data, yet collecting kernel execution traces from production systems is expensive and often infeasible due to privacy constraints. We present a diffusion-based approach for generating synthetic kernel traces that can augment or replace real data. Our multi-channel diffusion model jointly generates six correlated trace attributes in a unified latent space, coupled with a constraint-guided repair mechanism that ensures 100\% structural validity.
+We evaluate synthetic trace quality on six diverse benchmarks through a downstream next-event prediction task.
+Our results reveal strong workload dependence: for deterministic, compute-heavy workloads (scimark2), synthetic augmentation achieves 87.2\% F1-Macro at context length L=4096---only 2.6 percentage points below real-only baselines---demonstrating production viability.
+In contrast, I/O-intensive workloads exhibit 25--36\% degradation, indicating fundamental challenges for current generative approaches.
+Context length emerges as the dominant quality factor, with L=4096 providing +104\% relative improvement over L=256.
+Constraint-guided repair consistently improves synthetic data quality by 13--18\% across configurations.
+Ablation studies show that 2-channel models achieve 97--99\% of full 6-channel performance while requiring only half of computational resources.
 
-% We evaluate our approach on nine diverse Phoronix benchmarks using next-event prediction as a proxy for synthetic data quality. For deterministic workloads, synthetic augmentation achieves 87.2\% F1-Macro---only 2.6 percentage points below real-only baselines---demonstrating production viability. Context length emerges as the dominant quality factor, with L=4096 doubling average performance (+104\% relative gain). Ablation studies show that 2-channel models achieve comparable quality to 6-channel models while requiring only 33\% of computational resources.
-
-% Our findings provide actionable guidance for practitioners: synthetic data is viable for deterministic workloads when using sufficient context (L=4096) and constraint repair, enabling organizations to double training dataset size with minimal quality loss. Even for challenging I/O-heavy workloads, high Top-K accuracy (96--99.8\%) enables valuable use cases including software testing, privacy-preserving trace sharing, and development prototyping.
+\textsc{SynthTrace} enables practitioners to augment limited real traces with high-fidelity synthetic data for deterministic workloads, reducing data collection costs while providing actionable guidance on when synthetic augmentation is viable.
 \end{abstract}

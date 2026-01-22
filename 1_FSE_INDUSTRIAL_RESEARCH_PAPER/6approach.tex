@@ -35,12 +35,9 @@ This section describes the preprocessing pipeline that converts raw kernel trace
 \subsubsection{Dataset and Trace Extraction}
 \label{sec:trace-extraction}
 
-Our study builds on an existing corpus of real-world kernel execution traces collected using the Linux Tracing Toolkit Next Generation (LTTng). Specifically, we use the dataset introduced by Martin et al.~\cite{martin2017lttng}, which contains execution traces for nine widely used Phoronix benchmarks: \emph{compress-gzip}, \emph{ffmpeg}, \emph{iozone}, \emph{phpbench}, \emph{pybench}, \emph{ramspeed}, \emph{scimark2}, \emph{stream}, and \emph{unpack-linux}. These benchmarks exercise diverse system behaviors, including CPU-intensive, memory-intensive, and I/O-heavy workloads, making them suitable for studying realistic kernel-level activity.
+We use kernel execution traces from the LTTng dataset introduced by Martin et al.~\cite{martin2017lttng}, which contains traces for nine Phoronix benchmarks spanning CPU-intensive, memory-intensive, and I/O-heavy workloads. We focus on six benchmarks (\emph{ffmpeg}, \emph{iozone}, \emph{pybench}, \emph{scimark2}, \emph{stream}, \emph{unpack-linux}) using the \emph{all-events} configuration, which captures kernel-level events across the entire operating system. Each benchmark provides 32 independent runs.
 
-The traces were collected on a desktop-class machine equipped with an x86-64 Xeon E3-1225 processor running at 3.20\,GHz, 32\,GB of memory, SSD storage, and a Gigabit Ethernet connection. For each benchmark, the dataset provides execution traces across three tracing configurations, with 32 independent runs per configuration. In this work, we focus exclusively on the \emph{all-events} configuration of six benchmarks: \emph{ffmpeg}, \emph{iozone}, \emph{pybench}, \emph{scimark2}, \emph{stream}, and \emph{unpack-linux} , which captures kernel-level events across the entire operating system. We exclude the \emph{libc} configuration, which traces user-space memory-related function calls, as our objective is to model kernel behavior rather than application-level APIs.
-The original traces are stored in the native LTTng kernel trace format, which is not directly suitable for machine learning workflows. To convert these traces into a more accessible representation, we use the \texttt{babeltrace2} toolchain to decode and dump the binary LTTng traces into human-readable text logs. This step preserves the full event stream while making the data amenable to systematic parsing and transformation.
-
-Each decoded trace consists of a temporally ordered sequence of kernel events. For every event, the log records a high-resolution timestamp, the elapsed time since the previous event, the CPU core on which the event occurred, and event-specific metadata. An excerpt from a decoded trace is shown below for illustration:
+Raw LTTng traces are decoded using the \texttt{babeltrace2} toolchain into human-readable text logs. Each event records a high-resolution timestamp, inter-event time delta, CPU core, and event-specific metadata. An example excerpt:
 
 \begin{verbatim}
 [08:46:31.491346508] (+?.?????????) flutin kmem_kmalloc:
@@ -166,14 +163,9 @@ Our implementation is organized into a dataset loader for streaming windowed \te
 \subsection{Training Procedure}
 \label{sec:training}
 
-All models are trained using a unified training pipeline that operates on windowed NPZ trace shards. Each training run uses the same model architecture, diffusion schedule, optimization strategy, and loss formulation described in the previous sections. This controlled setup ensures reproducible behavior across configurations and isolates the effect of input context length from implementation artifacts.
+Models are trained on windowed NPZ trace shards using the architecture, diffusion schedule, and loss formulation described above. For each mini-batch, a diffusion timestep is sampled uniformly, noise is injected, and the Transformer denoiser predicts the injected noise. The auxiliary reconstruction loss is computed from the estimated clean latent state and jointly optimized with the diffusion objective.
 
-
-Training proceeds by randomly sampling windowed sequences from the training split and embedding them into a shared latent space. For each mini-batch, a diffusion timestep is sampled uniformly, noise is injected according to the forward diffusion process, and the Transformer denoiser is trained to predict the injected noise. The auxiliary reconstruction loss is computed from the estimated clean latent state and jointly optimized with the diffusion objective.
-
-We train separate models on datasets constructed with different fixed sequence lengths to assess how temporal context affects the robustness of generated traces. Aside from the sequence length and corresponding batch-size adjustments required to fit available hardware memory, all other training hyperparameters are held constant across runs. This design allows a controlled comparison of short-, medium-, and long-context training regimes within the same methodological framework.
-
-Optimization is performed using AdamW with a cosine learning-rate schedule. Training runs are checkpointed periodically, and the best-performing checkpoints (based on validation loss) are retained for downstream sampling and evaluation. All training jobs are executed in a distributed cluster environment using reproducible job scripts to ensure consistency across runs.
+We train separate models at different sequence lengths ($L \in \{256, 1024, 4096\}$) to assess how temporal context affects generation quality. Batch sizes are adjusted to fit GPU memory; all other hyperparameters remain constant. Optimization uses AdamW with cosine learning-rate decay. The best checkpoint (by validation loss) is retained for sampling and evaluation.
 
 
 \subsection{Constraint Learning and Post-hoc Repair}

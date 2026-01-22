@@ -12,3 +12,5 @@ logs_tensorboard
 
 /experiments_results
 /experiments_downstream_results
+/logs/
+/slurm_jobs/

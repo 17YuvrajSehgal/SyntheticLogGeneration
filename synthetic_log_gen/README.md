@@ -1,261 +1,260 @@
-# Synthetic Kernel Log Generation
+# Synthetic Log Generation Framework
 
-This package contains the core framework for generating synthetic kernel execution traces using **Transformer-based Diffusion Models**. The system learns the complex temporal and structural patterns in real kernel traces and generates realistic synthetic traces that preserve statistical properties while maintaining validity constraints.
+This package implements a **Transformer-based Diffusion Model** for generating synthetic kernel execution traces. The system learns complex temporal and structural patterns from real LTTng kernel traces and generates realistic synthetic traces that preserve statistical properties while maintaining validity constraints.
+
+---
 
 ## Table of Contents
 - [Overview](#overview)
-- [Theoretical Background](#theoretical-background)
 - [Architecture](#architecture)
-- [Data Loading](#data-loading)
-- [Model Components](#model-components)
-- [Constraint Repair System](#constraint-repair-system)
+- [Module Reference](#module-reference)
 - [Usage](#usage)
-- [Recent Improvements](#recent-improvements)
+- [File Structure](#file-structure)
 
 ---
 
 ## Overview
 
-### What is This?
+### Purpose
 
-This framework generates **synthetic kernel execution traces** that can be used for:
-- **Data augmentation** for downstream machine learning tasks
-- **Privacy-preserving** trace sharing (no real user data)
+Generate **synthetic kernel execution traces** for:
+- **Data augmentation** for downstream ML tasks (anomaly detection, workload classification)
+- **Privacy-preserving** trace sharing (no real user data exposure)
 - **Benchmarking** and testing trace analysis tools
 - **Simulation** of rare or adversarial execution patterns
 
 ### Key Features
 
-✅ **Multi-modal generation**: Handles both categorical (events, CPU IDs) and continuous (timing) data  
-✅ **Constraint-aware**: Enforces valid event transitions and system call semantics  
-✅ **Scalable**: Efficient shard-based data loading for large datasets  
-✅ **Flexible**: Supports partial channel modeling (ablation studies)  
-✅ **Fast sampling**: DDIM acceleration (50 steps vs 1000)  
-
----
-
-## Theoretical Background
-
-### Diffusion Models
-
-Diffusion models are a class of generative models that learn to reverse a gradual noising process:
-
-1. **Forward Process** (Noising): Gradually add Gaussian noise to real data over T steps
-   ```
-   q(x_t | x_{t-1}) = N(x_t; √(1-β_t) x_{t-1}, β_t I)
-   ```
-   - Starts with real data x₀
-   - Ends with pure noise x_T ~ N(0, I)
-
-2. **Reverse Process** (Denoising): Learn to reverse the process
-   ```
-   p_θ(x_{t-1} | x_t) = N(x_{t-1}; μ_θ(x_t, t), Σ_θ(x_t, t))
-   ```
-   - Neural network predicts the noise added at each step
-   - Iteratively denoise from x_T → x₀
-
-3. **Training Objective**: Predict the noise ε added at timestep t
-   ```
-   L_simple = E_t,x₀,ε [||ε - ε_θ(x_t, t)||²]
-   ```
-
-### Why Diffusion for Kernel Traces?
-
-Traditional generative models (GANs, VAEs) struggle with:
-- **Multi-modal data**: Mixing categorical (events) and continuous (timing)
-- **Long-range dependencies**: Event sequences with complex temporal patterns
-- **Constraint satisfaction**: Valid system call transitions
-
-**Diffusion models excel because**:
-- Stable training (no mode collapse like GANs)
-- High-quality samples with iterative refinement
-- Natural handling of multi-modal data in latent space
-- Can incorporate constraints via guidance or repair
+- ✅ **Multi-channel modeling**: Handles 7 channels (event, dt, cpu, tid, fd, comm, ret)
+- ✅ **Constraint-aware generation**: Enforces valid event transitions and system call semantics
+- ✅ **Scalable data loading**: Efficient shard-based streaming for large datasets
+- ✅ **Fast sampling**: DDIM acceleration (50 steps vs 1000 steps, 20x faster)
+- ✅ **Validation and repair**: Post-generation constraint checking and fixing
 
 ---
 
 ## Architecture
 
-### High-Level Pipeline
+### Pipeline Overview
 
-```
-Real Traces → Embedding → Diffusion Training → Sampling → Unembedding → Synthetic Traces
-                ↓                                              ↓
-           Latent Space                                  Constraint Repair
+```mermaid
+graph LR
+    A["Real Traces (NPZ)"] --> B["FeatureEmbedder"]
+    B --> C["Latent Space (d_model)"]
+    C --> D["TransformerDenoiser"]
+    D --> E["Diffusion Training"]
+    E --> F["Trained Model"]
+    F --> G["DDIM Sampling"]
+    G --> H["FeatureUnembedder"]
+    H --> I["Synthetic Traces"]
+    I --> J["Constraint Validation"]
+    J --> K["Repair (if needed)"]
+    K --> L["Valid Synthetic Traces"]
 ```
 
-### Model Components
+### Diffusion Process
 
+**Forward Process** (Training): Add Gaussian noise to real data over T timesteps
 ```
-┌─────────────────────────────────────────────────────────┐
-│                  LogDiffusionModel                      │
-├─────────────────────────────────────────────────────────┤
-│  1. FeatureEmbedder                                     │
-│     ├─ Event Embedding (384 classes)                   │
-│     ├─ CPU Embedding (4 cores)                         │
-│     ├─ TID Embedding (256 threads)                     │
-│     ├─ Comm Embedding (123 process names)              │
-│     ├─ Ret Embedding (1026 return values)              │
-│     └─ DT Projection (continuous time deltas)          │
-│                                                         │
-│  2. TransformerDenoiser                                │
-│     ├─ Positional Encoding                             │
-│     ├─ Timestep Embedding (sinusoidal)                 │
-│     ├─ Multi-Head Self-Attention (8 heads)             │
-│     ├─ Feed-Forward Networks                           │
-│     └─ Layer Normalization                             │
-│                                                         │
-│  3. FeatureUnembedder                                  │
-│     ├─ Event Logits (384-way classification)           │
-│     ├─ CPU Logits (4-way)                              │
-│     ├─ TID Logits (256-way)                            │
-│     ├─ Comm Logits (123-way)                           │
-│     ├─ Ret Logits (1026-way)                           │
-│     └─ DT Prediction (regression)                      │
-└─────────────────────────────────────────────────────────┘
+q(x_t | x_{t-1}) = N(x_t; √(1-β_t) x_{t-1}, β_t I)
+```
+
+**Reverse Process** (Sampling): Learn to denoise from pure noise to data
+```
+p_θ(x_{t-1} | x_t) = N(x_{t-1}; μ_θ(x_t, t), Σ_θ(x_t, t))
+```
+
+**Training Objective**: Predict the noise ε added at timestep t
+```
+L = E_t,x₀,ε [||ε - ε_θ(x_t, t)||²] + λ_recon * L_recon + λ_rep * L_rep + λ_trans * L_trans
 ```
 
 ---
 
-## Data Loading
+## Module Reference
 
-### NPZShardDataset
+### 1. Data Loading (`data/`)
 
-Efficient streaming dataset for large-scale kernel traces.
+#### `NPZShardDataset`
+Efficient streaming dataset for large-scale kernel traces stored as NPZ shards.
 
 **Features**:
-- **Shard-based loading**: Loads `.npz` files on-demand
-- **Metadata caching**: Avoids re-scanning disk on each epoch
-- **Memory efficient**: Only keeps current shard in memory
-- **Multi-worker support**: Compatible with PyTorch DataLoader
+- Shard-based loading with LRU caching
+- Memory-efficient (loads shards on-demand)
+- Multi-worker DataLoader compatible
+- Configurable channel selection for ablation studies
 
-**Data Format** (per window):
+**Data Format** (per sample):
 ```python
 {
-    'event': [seq_len],      # Event IDs (0-383)
-    'dt': [seq_len],         # Time deltas (microseconds)
-    'cpu': [seq_len],        # CPU core (0-3)
-    'tid': [seq_len],        # Thread ID (0-255)
-    'comm': [seq_len],       # Process name (0-122)
-    'ret': [seq_len]         # Return value (0-1025)
+    'event': [seq_len],  # Event IDs (int32)
+    'dt': [seq_len],     # Log-normalized time deltas (float32)
+    'cpu': [seq_len],    # CPU core ID (int8)
+    'tid': [seq_len],    # Thread ID bucket (int16)
+    'fd': [seq_len],     # File descriptor (int16)
+    'comm': [seq_len],   # Process name ID (int16)
+    'ret': [seq_len]     # Return value ID (int16)
 }
 ```
 
 **Usage**:
 ```python
-from synthetic_log_gen.data import make_dataloaders
+from synthetic_log_gen.data import NPZShardDataset, SampleConfig
 
-train_loader, val_loader = make_dataloaders(
-    data_dir="dataset/windowed_npz_1024",
-    benchmark="scimark2",
+config = SampleConfig(
     seq_len=1024,
-    batch_size=32,
-    num_workers=4
+    channels=("event", "dt", "cpu", "tid", "comm", "ret")
+)
+
+dataset = NPZShardDataset(
+    shard_paths=["path/to/shard1.npz", "path/to/shard2.npz"],
+    config=config,
+    cache_shards=2
+)
+```
+
+#### `SampleConfig`
+Configuration dataclass for dataset loading.
+
+**Parameters**:
+- `seq_len`: Sequence length (default: 1024)
+- `channels`: Tuple of channel names to load (default: all 7 channels)
+- `return_dict`: Return dict instead of tensor (default: False)
+- `dtype_*`: Data types for each channel
+
+**Helper Method**:
+- `get_dim()`: Returns total embedding dimension for configured channels
+
+---
+
+### 2. Model Components (`models/`)
+
+#### `FeatureEmbedder`
+Converts raw categorical indices and continuous values into unified latent representation.
+
+**Process**:
+1. **Discrete features**: Embedding lookup (event, cpu, tid, fd, comm, ret)
+2. **Continuous feature**: MLP projection (dt)
+3. **Fusion**: Sum all embeddings → `[B, L, d_model]`
+
+**Implementation**:
+```python
+class FeatureEmbedder(nn.Module):
+    def __init__(self, d_model, vocab_sizes, dropout=0.1):
+        # Creates nn.Embedding for each discrete channel
+        # Creates MLP for continuous dt channel
+        
+    def forward(self, inputs: dict) -> torch.Tensor:
+        # Returns: [B, L, d_model]
+```
+
+#### `TransformerDenoiser`
+Core denoising network that predicts noise at each diffusion timestep.
+
+**Architecture**:
+- **Input**: Noisy latent `x_t` + sinusoidal timestep embedding `t`
+- **Layers**: 4-8 Transformer encoder layers
+- **Attention**: Multi-head self-attention (4-8 heads)
+- **Output**: Predicted noise `ε`
+
+**Timestep Embedding**: Sinusoidal positional encoding for diffusion timestep
+
+#### `FeatureUnembedder`
+Projects denoised latents back to original feature space.
+
+**Process**:
+1. **Discrete channels**: Linear projection to logits (classification)
+2. **Continuous channel (dt)**: Linear projection to scalar (regression)
+
+**Output**: Dictionary of logits/predictions for each channel
+
+#### `LogDiffusionModelBetter`
+Complete diffusion model with advanced training features.
+
+**Key Components**:
+- `FeatureEmbedder`: Input embedding
+- `TransformerDenoiser`: Noise prediction network
+- `FeatureUnembedder`: Output projection
+- Noise scheduler (linear beta schedule)
+
+**Advanced Loss Functions**:
+1. **Latent loss**: Standard diffusion objective (MSE on predicted noise)
+2. **Reconstruction loss**: Maintains semantic meaning via cross-entropy/MSE
+3. **Repetition loss**: Penalizes unrealistic event repetition patterns
+4. **Transition frequency loss**: Enforces realistic transition distributions
+
+**Sampling Methods**:
+- `sample()`: Standard DDPM sampling (1000 steps)
+- `sample_ddim()`: Fast DDIM sampling (50 steps, 20x faster)
+
+**Configuration**:
+```python
+model = LogDiffusionModelBetter(
+    vocab_sizes={
+        'event': 384,
+        'cpu': 4,
+        'tid': 256,
+        'fd': 1025,
+        'comm': 123,
+        'ret': 1026
+    },
+    d_model=256,
+    nhead=8,
+    num_layers=4,
+    max_timesteps=1000,
+    dropout=0.1,
+    target_repeats=279,        # From real data statistics
+    repetition_weight=0.05,
+    transition_weight=0.03
 )
 ```
 
 ---
 
-## Model Components
+### 3. Constraint System
 
-### 1. FeatureEmbedder
+#### `validate.py`
+Validates generated traces against learned constraints.
 
-Converts raw categorical indices and continuous values into a unified latent representation.
+**Validation Checks**:
+1. **Event transitions**: Checks if `event[t] → event[t+1]` is valid
+2. **Timing bounds**: Verifies `dt` values are within learned min/max
+3. **CPU affinity (global)**: Checks if CPU ID exists in system
+4. **CPU affinity (local)**: Checks if event can occur on specific CPU
 
-**Process**:
-1. **Categorical Features**: Lookup in learned embedding tables
-   - Event: 384 → 128-dim
-   - CPU: 4 → 32-dim
-   - TID: 256 → 64-dim
-   - Comm: 123 → 32-dim
-   - Ret: 1026 → 64-dim
-
-2. **Continuous Feature**: Linear projection
-   - DT: 1 → 64-dim
-
-3. **Fusion**: Concatenate all embeddings → Project to d_model (256)
-
-**Code**:
-```python
-class FeatureEmbedder(nn.Module):
-    def __init__(self, vocab_sizes, d_model=256):
-        self.event_emb = nn.Embedding(vocab_sizes['event'], 128)
-        self.cpu_emb = nn.Embedding(vocab_sizes['cpu'], 32)
-        # ... other embeddings
-        self.fusion = nn.Linear(sum_of_dims, d_model)
-    
-    def forward(self, inputs):
-        event_emb = self.event_emb(inputs['event'])
-        cpu_emb = self.cpu_emb(inputs['cpu'])
-        # ... concatenate and fuse
-        return self.fusion(torch.cat([...], dim=-1))
+**Usage**:
+```bash
+python synthetic_log_gen/validate.py \
+    --trace synthetic_output.npz \
+    --constraints dataset/constraints_universal.json \
+    --output validity_report.json
 ```
 
-### 2. TransformerDenoiser
-
-The core denoising network that predicts noise at each diffusion timestep.
-
-**Architecture**:
-- **Input**: Noisy latent x_t + timestep embedding t
-- **Layers**: 4-8 Transformer encoder layers
-- **Attention**: Multi-head self-attention (4-8 heads)
-- **Output**: Predicted noise ε
-
-**Timestep Embedding**:
-```python
-def timestep_embedding(t, dim):
-    half = dim // 2
-    freqs = torch.exp(-math.log(10000) * torch.arange(half) / half)
-    args = t[:, None] * freqs[None, :]
-    return torch.cat([torch.cos(args), torch.sin(args)], dim=-1)
+**Output Format**:
+```json
+{
+  "validity_score": {
+    "transitions": 95.2,
+    "timing": 98.7,
+    "cpu_global": 100.0,
+    "cpu_local": 94.3
+  },
+  "details": {
+    "total_samples": 10000,
+    "seq_len": 1024,
+    "invalid_transitions": 49152,
+    "invalid_dts": 13312
+  }
+}
 ```
 
-### 3. FeatureUnembedder
+#### `repair.py`
+Repairs constraint violations in generated traces using probabilistic replacement.
 
-Projects denoised latents back to original feature space for reconstruction loss.
-
-**Process**:
-1. **Split latent**: d_model → per-feature dimensions
-2. **Project to logits**: Linear layers for each categorical feature
-3. **Regression**: Linear layer for continuous DT
-
-**Purpose**:
-- Calculate reconstruction loss during training
-- Decode samples during generation
-
----
-
-## Constraint Repair System
-
-### Why Repair?
-
-Diffusion models can generate **invalid traces** that violate:
-- Event transition rules (e.g., `open()` before `close()`)
-- Timing constraints (negative or unrealistic time deltas)
-- System call semantics (invalid return values)
-
-### Repair Process
-
-1. **Constraint Learning**: Extract valid patterns from real traces
-   ```python
-   {
-       "event_transitions": {
-           "open": ["read", "write", "close"],
-           "read": ["read", "write", "close"]
-       },
-       "timing_bounds": {
-           "event_42": {"min": 10, "max": 5000}
-       }
-   }
-   ```
-
-2. **Violation Detection**: Scan synthetic trace for constraint violations
-
-3. **Pattern Replacement**: Replace invalid segments with valid patterns from real data
-   ```python
-   if transition_invalid(event[i], event[i+1]):
-       replace_segment(trace, i, valid_pattern_store)
-   ```
+**Repair Strategy**:
+1. **Transition repair**: Replace invalid `event[t+1]` with valid successor sampled from learned probabilities
+2. **Timing repair**: Adjust `dt` values to match constraints for new events
+3. **CPU repair**: Move events to allowed CPUs
 
 **Usage**:
 ```bash
@@ -265,6 +264,12 @@ python synthetic_log_gen/repair.py \
     --output synthetic_repaired.npz
 ```
 
+**Repair Process**:
+- Scans each trace for violations
+- Replaces invalid segments with valid patterns
+- Uses learned event probabilities for realistic sampling
+- Reports repair statistics (repairs made / total checks)
+
 ---
 
 ## Usage
@@ -272,21 +277,33 @@ python synthetic_log_gen/repair.py \
 ### Training a Diffusion Model
 
 ```bash
-python train_experiment_better.py \
-    --benchmark scimark2 \
+python train_experiment.py \
+    --benchmark compress-gzip \
     --window 1024 \
     --batch-size 32 \
     --epochs 20 \
     --d-model 256 \
-    --nhead 4 \
-    --num-layers 4
+    --nhead 8 \
+    --num-layers 4 \
+    --lr 1e-4
 ```
+
+**Key Arguments**:
+- `--benchmark`: Dataset benchmark name (e.g., `compress-gzip`, `ffmpeg`)
+- `--window`: Sequence length (256, 1024, or 4096)
+- `--batch-size`: Training batch size
+- `--epochs`: Number of training epochs
+- `--d-model`: Transformer hidden dimension
+- `--nhead`: Number of attention heads
+- `--num-layers`: Number of Transformer layers
+
+**Output**: Checkpoints saved to `logs_tensorboard/<experiment_name>/`
 
 ### Generating Synthetic Traces
 
 ```bash
 python sample_diffusion.py \
-    --ckpt logs_tensorboard/improved_baseline_scimark2_1024/ckpt_epoch_19.pt \
+    --ckpt logs_tensorboard/experiment_name/ckpt_epoch_19.pt \
     --out synthetic_traces.npz \
     --num-samples 10000 \
     --seq-len 1024 \
@@ -294,67 +311,31 @@ python sample_diffusion.py \
     --ddim-steps 50
 ```
 
-### Downstream Evaluation
+**Key Arguments**:
+- `--ckpt`: Path to trained model checkpoint
+- `--out`: Output NPZ file path
+- `--num-samples`: Number of traces to generate
+- `--seq-len`: Sequence length (must match training)
+- `--use-ddim`: Enable fast DDIM sampling
+- `--ddim-steps`: Number of DDIM steps (default: 50)
+
+### Validating Generated Traces
 
 ```bash
-# Full pipeline
-python run_pipeline.py --benchmark scimark2 --window 1024
-
-# Ablation study
-python run_ablation_pipeline.py --benchmark scimark2
+python synthetic_log_gen/validate.py \
+    --trace synthetic_traces.npz \
+    --constraints dataset/constraints_universal.json \
+    --output validity_report.json
 ```
 
----
+### Repairing Invalid Traces
 
-## Model Features
-
-### 1. Advanced Loss Functions
-
-The diffusion model includes sophisticated loss components for high-quality generation:
-
-**Loss Components**:
-- ✅ **Latent loss**: Standard diffusion objective (noise prediction)
-- ✅ **Reconstruction loss**: Maintains semantic meaning in latent space
-- ✅ **Repetition-aware loss**: Penalizes unrealistic event repetitions
-- ✅ **Transition frequency loss**: Enforces realistic transition patterns
-- ✅ **Numerical stability**: Safe KL divergence and conditional computation
-
-**Combined Loss Function**:
-```python
-total_loss = latent_loss + 
-             λ_recon * reconstruction_loss +
-             λ_rep * repetition_loss +
-             λ_trans * transition_loss
+```bash
+python synthetic_log_gen/repair.py \
+    --trace synthetic_traces.npz \
+    --constraints dataset/constraints_universal.json \
+    --output synthetic_repaired.npz
 ```
-
-### 2. DDIM Fast Sampling
-
-**Speedup**: 1000 steps → 50 steps (20x faster!)
-
-**Quality**: Minimal degradation with proper step scheduling
-
-**Usage**: `--use-ddim --ddim-steps 50`
-
-**How it works**: DDIM (Denoising Diffusion Implicit Models) uses a deterministic sampling process that skips intermediate timesteps while maintaining sample quality.
-
-### 3. Flexible Channel Modeling
-
-**Ablation Support**: Train models with partial channels for research and efficiency
-
-**Configurations**:
-- **Base**: event + dt (2 channels) - Minimal, fastest
-- **System**: event + dt + cpu + tid (4 channels) - Balanced
-- **Full**: all 6 channels - Maximum information
-
-**Use Case**: Study channel importance or reduce computational cost
-
-### 4. Parallel Pipeline Execution
-
-**Speedup**: 4.5 hours → 1.25 hours (3.6x faster)
-
-**Method**: Independent training experiments run concurrently
-
-**Implementation**: `ProcessPoolExecutor` for Phase 2 (training) and Phase 3 (ablation)
 
 ---
 
@@ -363,69 +344,120 @@ total_loss = latent_loss +
 ```
 synthetic_log_gen/
 ├── data/
-│   ├── dataset.py           # NPZShardDataset, data loading
-│   └── config.py            # SampleConfig
+│   ├── __init__.py          # Exports: NPZShardDataset, SampleConfig
+│   └── dataset.py           # Dataset implementation with shard loading
 ├── models/
-│   ├── diffusion_better.py  # LogDiffusionModelBetter (main model)
-│   ├── embeddings.py        # FeatureEmbedder, FeatureUnembedder
-│   └── __init__.py
-├── repair.py                # Constraint-based repair
+│   ├── __init__.py          # Exports: LogDiffusionModelBetter, embeddings
+│   ├── diffusion.py         # Original diffusion model (legacy)
+│   ├── diffusion_better.py  # Improved model with advanced losses
+│   └── embeddings.py        # FeatureEmbedder, FeatureUnembedder
+├── validate.py              # Constraint validation script
+├── repair.py                # Constraint repair script
 └── README.md                # This file
 ```
 
 ---
 
-## Performance Benchmarks
+## Model Specifications
 
-### Training Time (1 epoch, scimark2)
+### Default Vocabulary Sizes
 
-| Window | Batch Size | GPU | Time |
-|--------|-----------|-----|------|
-| 256 | 64 | H100 | ~5 min |
-| 1024 | 32 | H100 | ~15 min |
-| 4096 | 8 | H100 | ~60 min |
+Based on the LTTng Phoronix dataset:
 
-### Sampling Speed
+| Channel | Vocabulary Size | Description |
+|---------|----------------|-------------|
+| `event` | 384 | Unique kernel event types |
+| `cpu` | 4 | CPU cores (0-3) |
+| `tid` | 256 | Thread ID buckets (hashed) |
+| `fd` | 1025 | File descriptors (0-1024, clamped) |
+| `comm` | 123 | Process command names |
+| `ret` | 1026 | Return values (Top-K + special tokens) |
+| `dt` | 1 | Continuous time delta (log-normalized) |
 
-| Method | Steps | Time (10k samples) |
-|--------|-------|-------------------|
-| DDPM | 1000 | ~2 hours |
-| DDIM | 50 | ~6 minutes |
+### Training Configuration
 
-### Downstream Performance (F1 Macro)
+**Recommended Settings** (1024 sequence length):
+- `d_model`: 256
+- `nhead`: 8
+- `num_layers`: 4
+- `batch_size`: 32
+- `learning_rate`: 1e-4
+- `max_timesteps`: 1000
+- `dropout`: 0.1
 
-| Training Data | Scimark2 | FFmpeg | Pybench |
-|---------------|----------|--------|---------|
-| Real only | 70% | 62% | 68% |
-| Synthetic only | 45% | 40% | 43% |
-| Real + Synthetic (repaired) | **73%** | **65%** | **71%** |
+**Training Time** (H100 GPU):
+- 256 window: ~5 min/epoch
+- 1024 window: ~15 min/epoch
+- 4096 window: ~60 min/epoch
 
-**Key Finding**: Synthetic data augmentation improves F1 by 3-5% across all benchmarks!
+### Sampling Performance
+
+| Method | Steps | Time (10K samples) | Quality |
+|--------|-------|-------------------|---------|
+| DDPM | 1000 | ~2 hours | Highest |
+| DDIM | 50 | ~6 minutes | Very Good (minimal degradation) |
 
 ---
 
-## Citation
+## Advanced Features
 
-```bibtex
-@inproceedings{sehgal2026synthetic,
-  title={Synthetic Kernel Trace Generation via Diffusion Models},
-  author={Sehgal, Yuvraj and others},
-  booktitle={Proceedings of FSE},
-  year={2026}
-}
+### Flexible Channel Modeling
+
+Train models with partial channels for ablation studies:
+
+```python
+config = SampleConfig(
+    seq_len=1024,
+    channels=("event", "dt")  # Minimal configuration
+)
 ```
 
+**Common Configurations**:
+- **Minimal**: `("event", "dt")` - 2 channels, fastest training
+- **System**: `("event", "dt", "cpu", "tid")` - 4 channels, balanced
+- **Full**: All 7 channels - maximum information
+
+### Constraint Learning
+
+Constraints are learned from real data using `data_processing/learn_constraints.py`:
+
+```bash
+python data_processing/learn_constraints.py \
+    --real_glob "dataset/windowed_npz_1024/**/*.npz" \
+    --output dataset/constraints_universal.json \
+    --num_events 384
+```
+
+**Learned Invariants**:
+1. **Transition graph**: Valid event sequences
+2. **Temporal bounds**: Min/max time deltas per event
+3. **CPU affinity**: Allowed CPUs per event
+4. **Thread identity**: Allowed TID buckets per event
+5. **Semantic context**: Allowed comm, fd, ret values per event
+
 ---
 
-## License
+## Notes
 
-[Add your license here]
+### Data Format Compatibility
 
----
+- Input NPZ files must match the format produced by `data_processing/parquet_to_windowed_npz.py`
+- All channels use the same sequence length `L`
+- Time deltas (`dt`) are log-normalized: `log(1 + Δt)`
+- Thread IDs are hashed: `tid % 256`
+- File descriptors are clamped: `fd ≥ 1024 → 1024`
 
-## Support
+### Memory Management
 
-For questions or issues:
-1. Check documentation: `PIPELINE_DOCUMENTATION.md`, `ABLATION_PIPELINE_DOCUMENTATION.md`
-2. Review training logs in `logs_tensorboard/`
-3. Verify data format with `dataset/README.md`
+- `NPZShardDataset` uses LRU caching (default: 2 shards)
+- Increase `cache_shards` for faster training if memory allows
+- Use `num_workers > 0` in DataLoader for parallel loading
+- Set `prefetch_factor` to pre-load batches (default: 2)
+
+### Best Practices
+
+1. **Always validate** generated traces before use
+2. **Repair violations** for downstream tasks requiring hard guarantees
+3. **Use DDIM** for fast sampling unless highest quality is critical
+4. **Monitor TensorBoard** logs during training for convergence
+5. **Match sequence length** between training and sampling

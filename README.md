@@ -238,17 +238,6 @@ Measures synthetic data utility through next-event prediction task.
 ### Source
 > Alexis Martin, V. M.-M. (2017). LTTng Execution traces for ten Phoronix benchmarks (part1) [Data set]. Zenodo. https://doi.org/10.5281/zenodo.437170
 
-### Benchmarks
-- compress-gzip
-- ffmpeg
-- mysql
-- apache
-- postgresql
-- redis
-- nginx
-- python
-- php
-- nodejs
 
 **Note**: Dataset not included due to size. Download from Zenodo and follow setup instructions in [`data_processing/README.md`](data_processing/README.md).
 

@@ -1,6 +1,6 @@
-# Synthetic Log Generation Framework
+# TraceSynth — Diffusion Model & Constraint Repair
 
-This package implements a **Transformer-based Diffusion Model** for generating synthetic kernel execution traces. The system learns complex temporal and structural patterns from real LTTng kernel traces and generates realistic synthetic traces that preserve statistical properties while maintaining validity constraints.
+This package implements the **Transformer-based diffusion model** at the core of **TraceSynth** (Stage 2), together with the constraint validation and repair modules (Stage 3). The model learns complex temporal and structural patterns from real LTTng kernel traces and generates realistic synthetic traces that preserve statistical properties while maintaining validity constraints.
 
 ---
 
@@ -25,7 +25,7 @@ Generate **synthetic kernel execution traces** for:
 
 ### Key Features
 
-- ✅ **Multi-channel modeling**: Handles 7 channels (event, dt, cpu, tid, fd, comm, ret)
+- ✅ **Multi-channel modeling**: The six channels reported in the paper (event, dt, cpu, tid, comm, ret); the code additionally supports an `fd` channel present in the NPZ shards
 - ✅ **Constraint-aware generation**: Enforces valid event transitions and system call semantics
 - ✅ **Scalable data loading**: Efficient shard-based streaming for large datasets
 - ✅ **Fast sampling**: DDIM acceleration (50 steps vs 1000 steps, 20x faster)
@@ -278,19 +278,21 @@ python synthetic_log_gen/repair.py \
 
 ```bash
 python train_experiment.py \
-    --benchmark compress-gzip \
-    --window 1024 \
+    --data-root scratch/windowed_npz_1024 \
+    --benchmark scimark2 \
+    --seq-len 1024 \
     --batch-size 32 \
     --epochs 20 \
     --d-model 256 \
     --nhead 8 \
     --num-layers 4 \
-    --lr 1e-4
+    --lr 2e-4
 ```
 
 **Key Arguments**:
-- `--benchmark`: Dataset benchmark name (e.g., `compress-gzip`, `ffmpeg`)
-- `--window`: Sequence length (256, 1024, or 4096)
+- `--data-root`: Root directory containing the windowed NPZ `train/val/test` folders
+- `--benchmark`: Dataset benchmark subdirectory (e.g., `scimark2`, `ffmpeg`, `pybench`)
+- `--seq-len`: Sequence length / context length (256, 1024, or 4096)
 - `--batch-size`: Training batch size
 - `--epochs`: Number of training epochs
 - `--d-model`: Transformer hidden dimension
@@ -412,10 +414,10 @@ config = SampleConfig(
 )
 ```
 
-**Common Configurations**:
-- **Minimal**: `("event", "dt")` - 2 channels, fastest training
+**Common Configurations** (the feature-richness settings used in the RQ4 ablation):
+- **Base**: `("event", "dt")` - 2 channels, fastest training
 - **System**: `("event", "dt", "cpu", "tid")` - 4 channels, balanced
-- **Full**: All 7 channels - maximum information
+- **Full**: `("event", "dt", "cpu", "tid", "comm", "ret")` - 6 channels, maximum information
 
 ### Constraint Learning
 

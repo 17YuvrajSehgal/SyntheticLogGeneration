@@ -1,6 +1,6 @@
 # Downstream Task Experiments
 
-This directory contains the experimental framework for evaluating **synthetic kernel trace utility** through downstream machine learning tasks. The primary task is **next-event prediction**: given a sequence of kernel events, predict the next event.
+This directory contains **Stage 4 of TraceSynth**: the experimental framework for evaluating **synthetic kernel trace utility** through downstream machine learning tasks. The primary task is **next-event prediction**: given a sequence of kernel events, predict the next event. This is the task used to answer the paper's research questions (RQ1–RQ4).
 
 ---
 
@@ -37,38 +37,44 @@ Evaluate synthetic data quality by measuring **downstream task performance** rat
 
 ## Research Questions
 
-### RQ1: Data Utility
-**Can synthetic traces replace or augment real data?**
+This framework answers the four research questions from the TraceSynth paper. All are evaluated with the downstream next-event prediction task on a held-out **real** test set (macro-F1 as the primary metric).
 
-**Experiments**:
-1. Real data only (baseline)
-2. Synthetic data only (raw)
-3. Synthetic data only (repaired)
-4. Real + Synthetic (50/50 augmentation)
+### RQ1: Augmentation utility
+**When can synthetic execution traces safely augment limited real training data?**
 
-**Expected Outcome**: Repaired synthetic + real > real alone
+**Comparison**: `Real-only` vs `Combined` (50% real + 50% constraint-repaired synthetic), across six benchmarks and *L* ∈ {256, 1024, 4096}.
+
+**Paper finding**: Strongly workload-dependent. Compute-heavy/structured workloads benefit most (e.g., `scimark2` reaches 87.2% macro-F1 at *L* = 4096, within 2.6 points of the real-only baseline), while I/O-heavy workloads degrade more.
 
 ---
 
-### RQ2: Repair Effectiveness
-**Does constraint-guided repair improve downstream performance?**
+### RQ2: Repair effectiveness
+**Does constraint-guided repair consistently improve synthetic data quality?**
 
-**Comparison**: F1(Repaired) vs F1(Raw)
+**Comparison**: `Combined (No Repair)` vs `Combined (Repaired)`.
 
-**Expected Outcome**: Repair improves F1 by 10-20 points
+**Paper finding**: Repair improves macro-F1 in 12/15 benchmark–context combinations (by 0.3–4.3%), with the largest gains at short context (*L* = 256); it acts as a low-risk safety net.
 
 ---
 
-### RQ3: Channel Importance
-**Which input channels are most critical for prediction?**
+### RQ3: Context length
+**How does increasing diffusion model context length affect synthetic data quality?**
 
-**Channel Configurations**:
-- **Event only**: `event`
-- **Base**: `event`, `dt`
-- **System**: `event`, `dt`, `cpu`, `tid`
-- **Full**: `event`, `dt`, `cpu`, `tid`, `comm`, `ret`
+**Comparison**: `Combined (Repaired)` datasets generated at *L* ∈ {256, 1024, 4096}.
 
-**Expected Outcome**: Identify optimal channel configuration
+**Paper finding**: Context length is the dominant quality factor — a +29.9-point (+104% relative) average macro-F1 gain moving from *L* = 256 to *L* = 4096, with diminishing returns beyond *L* = 1024.
+
+---
+
+### RQ4: Model complexity vs. cost
+**Can diffusion models with reduced feature complexity achieve comparable quality at lower cost?**
+
+**Channel Configurations** (diffusion feature richness):
+- **Base**: `event`, `dt` (2 channels)
+- **System**: `event`, `dt`, `cpu`, `tid` (4 channels)
+- **Full**: `event`, `dt`, `cpu`, `tid`, `comm`, `ret` (6 channels)
+
+**Paper finding**: 2-channel Base models retain 97–99% of Full-model performance; richer features only help highly deterministic workloads. Run via `run_ablation_pipeline.py`.
 
 ---
 
@@ -474,24 +480,24 @@ experiments_downstream/
 
 ---
 
-## Expected Results
+## Results (as reported in the paper)
 
-### Typical F1 Scores (Macro)
+The authoritative numbers are in Tables 2–6 of the TraceSynth paper. Selected macro-F1 results for the `Combined` (50% real + 50% repaired synthetic) configuration:
 
-Based on experiments with 1024 sequence length:
+| Benchmark | *L* = 256 | *L* = 1024 | *L* = 4096 | Real-only (*L* = 4096) |
+|-----------|-----------|------------|------------|------------------------|
+| scimark2  | 40.6% | 68.0% | **87.2%** | 89.8% |
+| pybench   | 41.8% | 69.7% | 78.3% | 88.6% |
+| ffmpeg    | 32.0% | 60.1% | 64.4% | 81.5% |
+| iozone    | 19.9% | 34.8% | 40.8% | 69.3% |
+| stream    | 17.6% | 40.7% | 44.9% | 69.7% |
+| unpack-linux | 27.8% | 44.3% | 43.8% | — |
 
-| Configuration | Compress-gzip | FFmpeg | Pybench |
-|---------------|---------------|--------|---------|
-| Real only | 70% | 62% | 68% |
-| Synthetic (raw) | 45% | 40% | 43% |
-| Synthetic (repaired) | 60% | 55% | 58% |
-| Real + Synthetic (repaired) | **73%** | **65%** | **71%** |
-
-**Key Findings**:
-1. ✅ Synthetic data augmentation improves F1 by 3-5%
-2. ✅ Repair improves synthetic-only F1 by 15-20%
-3. ✅ Combined (real + synthetic) > real alone
-4. ⚠️ Raw synthetic data alone performs poorly without repair
+**Key findings** (see paper for full context and caveats):
+1. Augmentation utility is **workload-dependent**: compute-heavy/structured workloads approach real-data performance; I/O-heavy workloads lag.
+2. **Context length dominates**: +104% relative macro-F1 from *L* = 256 to *L* = 4096.
+3. **Constraint-guided repair** improves quality by up to +4.3%, mainly at short context, and rarely degrades performance.
+4. Weighted-F1, accuracy, and Top-5/Top-10 accuracy remain high (86–99%) even where macro-F1 exposes rare-event degradation.
 
 ---
 

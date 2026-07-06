@@ -1,6 +1,6 @@
 # Data Processing Pipeline
 
-This directory contains the complete data processing pipeline for converting raw LTTng kernel traces into training-ready datasets for the Synthetic Log Generation system. The pipeline transforms text traces through multiple stages: vocabulary building, Parquet conversion, NPZ windowing, constraint learning, and dataset organization.
+This directory contains the complete data processing pipeline (Stage 1 of **TraceSynth**) for converting raw LTTng kernel traces into training-ready datasets. The pipeline transforms text traces through multiple stages: vocabulary building, Parquet conversion, NPZ windowing, constraint learning, and dataset organization.
 
 ---
 
